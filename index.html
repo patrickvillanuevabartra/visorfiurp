@@ -369,8 +369,8 @@ body{background:#CBD5E1;padding:24px 16px;font-family:"IBM Plex Sans",sans-serif
 </div></div>
 
 <script>
-var SU = "<?= PROXY_URL ?>";
-var ABRIR_ID = "<?= ABRIR_NOTICIA ?>";
+var SU = "https://script.google.com/macros/s/AKfycbyHIEYaOSKDSyvu4GoIeGi-MvZZECwZWywpYTA1PPParyTKIQdTcyjzmYFkHzlvjq4B/exec";
+var ABRIR_ID = (function(){ try { var p=new URLSearchParams(location.search); return p.get('abrir')||''; } catch(e){ return ''; } })();
 
 var REGIONES = [
   'Amazonas','Ancash','Apurimac','Arequipa','Ayacucho','Cajamarca',
