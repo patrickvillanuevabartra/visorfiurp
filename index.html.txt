@@ -1,0 +1,1086 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+<style>
+:root{--primary:#002D54;--green:#059669;--green-light:#ECFDF5;--blue:#0284c7;--blue-light:#EFF6FF;--accent:#E24B4A;--accent-light:#FFF1F2;--accent-tag:#FEE2E2;--accent-text:#A32D2D;--warning:#D97706;--warning-light:#FEF9C3;--warning-text:#92400E;--border:#E2E8F0;--bg:#F1F5F9;--surface:#F8FAFC;--text:#1E293B;--muted:#64748B;--subtle:#94A3B8;--gold:#F59E0B;--gold-bg:#FFFBEB;--gold-border:#FDE68A;--riesgo-bajo:#16A34A;--riesgo-bajo-bg:#DCFCE7;--riesgo-inter:#D97706;--riesgo-inter-bg:#FEF9C3;--riesgo-inm:#EA580C;--riesgo-inm-bg:#FFF7ED;--riesgo-crit:#DC2626;--riesgo-crit-bg:#FEE2E2;}
+*{box-sizing:border-box;margin:0;padding:0;}
+body{background:#CBD5E1;padding:24px 16px;font-family:"IBM Plex Sans",sans-serif;color:var(--text);font-size:18px;}
+.portal{background:white;border-radius:16px;box-shadow:0 20px 48px -8px rgba(0,0,0,0.22);overflow:hidden;max-width:1100px;margin:0 auto;}
+.portal-inner{padding:28px 32px;}
+.top-bar{display:flex;align-items:flex-start;margin-bottom:22px;gap:16px;}
+.etiq-mgr-toggle{background:none;border:1px solid var(--border);border-radius:8px;padding:7px 14px;font-size:13px;color:var(--muted);cursor:pointer;display:inline-flex;align-items:center;gap:6px;margin-bottom:10px;}
+.etiq-mgr-toggle:hover{background:var(--surface);}
+.etiq-mgr-panel{background:var(--surface);border:1px solid var(--border);border-radius:12px;padding:16px;margin-bottom:14px;display:none;}
+.etiq-mgr-panel.open{display:block;}
+.etiq-mgr-header{font-size:13px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:0.7px;margin-bottom:12px;}
+.etiq-mgr-new{display:flex;gap:8px;margin-bottom:14px;}
+.etiq-mgr-new input{flex:1;border:1px solid var(--border);border-radius:8px;padding:7px 12px;font-size:14px;outline:none;}
+.etiq-mgr-new input:focus{border-color:var(--primary);}
+.etiq-mgr-new button{background:var(--primary);color:white;border:none;border-radius:8px;padding:7px 16px;font-size:14px;font-weight:600;cursor:pointer;}
+.etiq-mgr-list{display:flex;flex-wrap:wrap;gap:8px;}
+.etiq-mgr-item{display:inline-flex;align-items:center;gap:6px;background:#E2E8F0;border:1px solid #CBD5E1;border-radius:20px;padding:5px 12px;font-size:13px;color:#475569;}
+.etiq-cnt{font-size:11px;background:#CBD5E1;border-radius:10px;padding:1px 6px;}
+.etiq-eb{background:none;border:none;cursor:pointer;font-size:13px;padding:0 2px;color:#94A3B8;}
+.etiq-eb:hover{color:var(--primary);}
+.etiq-db{background:none;border:none;cursor:pointer;font-size:13px;padding:0 2px;color:#FDA4AF;}
+.etiq-db:hover{color:#DC2626;}
+.etiq-mgr-empty{font-size:14px;color:var(--subtle);font-style:italic;}
+.etiq-ii{border:1px solid var(--primary);border-radius:6px;padding:2px 8px;font-size:13px;width:130px;outline:none;}
+.bell-wrap{width:56px;height:56px;border-radius:12px;background:transparent;display:flex;align-items:center;justify-content:center;font-size:28px;flex-shrink:0;}
+.portal-title{font-size:26px;font-weight:700;color:var(--text);line-height:1.3;}
+.portal-sub{font-size:17px;color:var(--muted);margin-top:3px;}
+.btn-add{display:inline-flex;align-items:center;gap:9px;padding:12px 24px;border-radius:10px;background:white;border:1.5px solid var(--border);font-size:17px;font-weight:600;color:var(--text);cursor:pointer;margin-bottom:18px;font-family:"IBM Plex Sans",sans-serif;}
+.search-bar{display:flex;gap:9px;margin-bottom:14px;flex-wrap:wrap;align-items:center;}
+.search-input-wrap{flex:1;min-width:220px;position:relative;}
+.search-input-wrap input{width:100%;padding:11px 16px 11px 42px;border-radius:9px;border:1.5px solid var(--border);font-size:17px;font-family:"IBM Plex Sans",sans-serif;color:var(--text);background:var(--surface);}
+.search-icon{position:absolute;left:13px;top:50%;transform:translateY(-50%);font-size:18px;color:var(--subtle);}
+.adv-toggle{padding:11px 16px;border-radius:9px;border:1.5px solid var(--border);font-size:16px;font-weight:600;color:var(--muted);cursor:pointer;background:white;font-family:"IBM Plex Sans",sans-serif;}
+.adv-toggle.open{background:var(--blue-light);color:var(--blue);border-color:#BAE6FD;}
+.adv-filters{display:none;background:var(--surface);border:1px solid var(--border);border-radius:10px;padding:16px;margin-bottom:14px;}
+.adv-filters.open{display:flex;flex-direction:column;gap:12px;}
+.adv-row{display:flex;flex-wrap:wrap;gap:12px;}
+.af-group{display:flex;flex-direction:column;}
+.af-group label{font-size:14px;font-weight:600;color:var(--subtle);margin-bottom:5px;}
+.af-group input,.af-group select{padding:9px 13px;border-radius:7px;border:1px solid var(--border);font-size:15px;font-family:"IBM Plex Sans",sans-serif;color:var(--text);background:white;}
+.btn-clear-adv{padding:9px 16px;border-radius:7px;border:1.5px solid var(--border);background:white;font-size:15px;color:var(--accent);font-weight:600;cursor:pointer;font-family:"IBM Plex Sans",sans-serif;align-self:flex-end;}
+.filters{display:flex;gap:7px;flex-wrap:wrap;margin-bottom:20px;}
+.fbtn{padding:9px 18px;border-radius:20px;border:1px solid var(--border);background:white;font-size:15px;color:var(--muted);cursor:pointer;font-family:"IBM Plex Sans",sans-serif;}
+.fbtn.on{background:var(--blue-light);color:var(--blue);border-color:#BAE6FD;font-weight:600;}
+.section-lbl{font-size:14px;font-weight:700;color:var(--subtle);text-transform:uppercase;letter-spacing:1px;margin-bottom:12px;}
+.section-dest{background:var(--gold-bg);border:1px solid var(--gold-border);border-radius:12px;padding:16px 20px;margin-bottom:22px;}
+.section-dest .section-lbl{color:#B45309;}
+.norma{background:white;border:1px solid var(--border);border-radius:12px;border-left:5px solid var(--accent);margin-bottom:12px;overflow:hidden;}
+.norma.arch{border-left-color:var(--border);opacity:0.6;}
+.norma.dest{border-left-color:var(--gold);background:#FFFEF7;}
+.norma.indexada{border-left-color:#8B5CF6;background:#FAFAFA;margin-left:32px;margin-bottom:8px;border-radius:8px;}
+.norma.indexada-nivel-2{border-left-color:#06B6D4;margin-left:64px;}
+.norma.indexada-nivel-3{border-left-color:#10B981;margin-left:96px;}
+.norma-topbar{display:flex;align-items:flex-start;justify-content:space-between;gap:12px;padding:16px 18px 10px;}
+.norma-head-left{display:flex;align-items:flex-start;gap:14px;flex:1;min-width:0;}
+.norma-icon{width:48px;height:48px;border-radius:10px;background:var(--surface);display:flex;align-items:center;justify-content:center;font-size:26px;flex-shrink:0;margin-top:2px;overflow:hidden;}
+.norma-icon img{width:100%;height:100%;object-fit:cover;border-radius:10px;}
+.norma-icon.sm{width:36px;height:36px;font-size:20px;}
+.norma-icon.sm img{border-radius:7px;}
+/* Iconos de red social con colores */
+.norma-icon.fb{background:#1877F2;color:white;font-size:22px;font-weight:700;}
+.norma-icon.ig{background:linear-gradient(135deg,#f09433,#e6683c,#dc2743,#cc2366,#bc1888);color:white;font-size:22px;}
+.norma-icon.yt{background:#FF0000;color:white;font-size:22px;}
+.norma-icon.tw{background:#1DA1F2;color:white;font-size:20px;}
+.norma-icon.wa{background:#25D366;color:white;font-size:22px;}
+.norma-title{font-size:21px;font-weight:700;color:var(--text);line-height:1.3;}
+.norma.indexada .norma-title{font-size:18px;}
+.norma-fuente{display:inline-flex;align-items:center;gap:5px;padding:4px 12px;background:#EFF6FF;border:1px solid #BAE6FD;border-radius:20px;font-size:14px;font-weight:600;color:#0284c7;margin-top:5px;cursor:pointer;}
+.norma-desc{font-size:17px;color:var(--muted);margin-top:6px;line-height:1.6;font-style:italic;}
+.norma.indexada .norma-desc{font-size:15px;}
+/* Extra info compacta: region y actores en tarjeta colapsada */
+.norma-extra{font-size:14px;color:var(--muted);margin-top:6px;display:flex;flex-wrap:wrap;gap:6px;}
+.norma-extra span{background:#E2E8F0;color:#475569;border:1px solid #CBD5E1;border-radius:6px;padding:3px 10px;}
+.norma-badges{display:flex;gap:5px;flex-wrap:wrap;margin-top:9px;}
+.badge{padding:4px 13px;border-radius:20px;font-size:14px;font-weight:600;}
+.b-48h{background:#F3E8FF;color:#6B21A8;}
+.b-consulta{background:#FEF9C3;color:#92400E;}
+.b-vigente{background:#ECFDF5;color:#065F46;}
+.b-derogada{background:#F1F5F9;color:#475569;}
+.b-riesgo-bajo{background:var(--riesgo-bajo-bg);color:var(--riesgo-bajo);}
+.b-riesgo-inter{background:var(--riesgo-inter-bg);color:var(--riesgo-inter);}
+.b-riesgo-inm{background:var(--riesgo-inm-bg);color:var(--riesgo-inm);}
+.b-riesgo-crit{background:var(--riesgo-crit-bg);color:var(--riesgo-crit);}
+.b-dest{background:var(--gold-bg);color:#92400E;border:1px solid var(--gold-border);}
+.b-hilo{background:#EDE9FE;color:#5B21B6;}
+.norma-tags{display:flex;flex-wrap:wrap;gap:5px;margin-top:9px;}
+.etiq{padding:4px 13px;border-radius:20px;font-size:14px;font-weight:700;cursor:pointer;letter-spacing:0.2px;}
+.et-color1{background:#DBEAFE;color:#1D4ED8;}
+.et-color2{background:#CCFBF1;color:#0D6B53;}
+.et-norma{background:#EDE9FE;color:#5B21B6;}
+.et-sindic{background:#FCE7F3;color:#9D174D;}
+.et-color3{background:#CCFBF1;color:#0D6B53;}
+.et-custom{background:#FEF9C3;color:#92400E;}
+.et-bajo{background:#DCFCE7;color:#166534;}
+.et-inter{background:#FEF9C3;color:#92400E;}
+.et-inm{background:#FFF7ED;color:#9A3412;}
+.et-crit{background:#FEE2E2;color:#991B1B;}
+.norma-actions{display:flex;gap:6px;align-items:flex-start;flex-shrink:0;}
+.ibt{width:38px;height:38px;border-radius:8px;border:1px solid var(--border);background:white;cursor:pointer;display:flex;align-items:center;justify-content:center;font-size:18px;color:var(--muted);}
+.ibt-edit{background:var(--blue-light);border-color:#BAE6FD;color:var(--blue);}
+.ibt-star.on{background:#FBBF24;border-color:#F59E0B;color:white;}
+.norma-meta{display:flex;align-items:center;gap:14px;padding:0 18px 12px;flex-wrap:wrap;}
+.norma-date{font-size:15px;color:var(--subtle);}
+.norma-link{font-size:15px;color:var(--blue);font-weight:600;text-decoration:underline;}
+.wa-link{font-size:15px;color:#25D366;font-weight:700;text-decoration:none;display:inline-flex;align-items:center;gap:5px;}
+.wa-link:hover{opacity:0.8;}
+.hilo-toggle{display:flex;align-items:center;gap:9px;padding:11px 18px;background:#F5F3FF;border-top:1px solid #DDD6FE;cursor:pointer;font-size:14px;font-weight:600;color:#5B21B6;flex-wrap:wrap;}
+.hilo-toggle:hover{background:#EDE9FE;}
+.hilo-expand{display:none;}
+.hilo-expand.open{display:block;}
+.norma-detail{display:none;border-top:1px solid var(--border);}
+.norma-detail.open{display:block;}
+.detail-body{display:grid;grid-template-columns:1fr 340px;}
+.detail-left{padding:18px 20px;display:flex;flex-direction:column;gap:11px;border-right:1px solid var(--border);}
+.detail-right{padding:18px 18px;background:#FFF8F8;display:flex;flex-direction:column;gap:11px;}
+.disp-section-title{font-size:13px;font-weight:700;color:var(--subtle);text-transform:uppercase;letter-spacing:0.8px;margin-bottom:6px;}
+.disp{display:flex;gap:11px;align-items:flex-start;padding:13px 15px;background:var(--surface);border-radius:9px;border-left:3px solid var(--green);}
+.disp-n{width:30px;height:30px;border-radius:50%;background:var(--green);color:white;font-size:15px;font-weight:700;display:flex;align-items:center;justify-content:center;flex-shrink:0;margin-top:1px;}
+.disp-title{font-size:17px;font-weight:700;color:var(--primary);margin-bottom:4px;}
+.disp-text{font-size:16px;color:var(--muted);line-height:1.6;}
+.link-row{display:flex;align-items:center;gap:9px;padding:13px 15px;background:var(--blue-light);border-radius:9px;border-left:3px solid var(--blue);font-size:15px;flex-wrap:wrap;}
+.link-row a{color:var(--blue);font-weight:700;text-decoration:underline;}
+.oaipcs-label{font-size:14px;font-weight:700;text-transform:uppercase;letter-spacing:0.8px;color:#be123c;}
+.risk-row{display:flex;align-items:center;gap:9px;padding:10px 13px;border-radius:8px;border:1px solid;margin-top:9px;}
+.pulse{width:12px;height:12px;border-radius:50%;flex-shrink:0;}
+.r-block{border-radius:0 8px 8px 0;padding:12px 14px;font-size:16px;line-height:1.6;color:var(--text);}
+.r-red{background:var(--accent-light);border-left:3px solid var(--accent);}
+.r-amber{background:var(--warning-light);border-left:3px solid var(--warning);}
+.r-title{font-size:16px;font-weight:700;margin-bottom:5px;display:block;}
+.r-red .r-title{color:#be123c;}
+.r-amber .r-title{color:var(--warning-text);}
+.hotspot{display:inline-flex;align-items:center;gap:2px;padding:5px 12px;border-radius:20px;font-size:14px;font-weight:700;background:var(--accent-tag);color:var(--accent-text);margin:2px;}
+.detail-footer{background:var(--bg);border-top:1px solid var(--border);padding:12px 20px;display:flex;align-items:center;justify-content:space-between;font-size:14px;color:var(--muted);}
+.arch-section{margin-top:7px;}
+.arch-section-title{font-size:13px;font-weight:700;color:var(--subtle);text-transform:uppercase;letter-spacing:0.8px;margin-bottom:9px;}
+.arch-link-row{display:flex;flex-direction:column;gap:6px;padding:10px 13px;background:var(--surface);border-radius:8px;border:1px solid var(--border);margin-bottom:7px;}
+.arch-link-icon{font-size:22px;flex-shrink:0;}
+.arch-link-name{font-size:15px;font-weight:600;color:var(--text);word-break:break-word;}
+.arch-img-preview{width:100%;max-height:160px;object-fit:cover;border-radius:8px;margin-bottom:7px;cursor:pointer;}
+.arch-btn{display:inline-flex;align-items:center;gap:6px;padding:8px 13px;border-radius:7px;font-size:14px;font-weight:600;text-decoration:none;}
+.arch-btn-view{background:var(--blue-light);color:var(--blue);border:1px solid #BAE6FD;}
+.link-input-wrap{display:flex;gap:9px;margin-bottom:9px;flex-wrap:wrap;}
+.link-input-wrap input{flex:1;min-width:180px;padding:10px 14px;border-radius:8px;border:1px solid var(--border);font-size:15px;font-family:"IBM Plex Sans",sans-serif;color:var(--text);background:white;}
+.btn-add-link{padding:10px 18px;border-radius:8px;background:var(--blue-light);border:1px solid #BAE6FD;font-size:15px;font-weight:600;color:var(--blue);cursor:pointer;font-family:"IBM Plex Sans",sans-serif;white-space:nowrap;}
+.links-preview-list{display:flex;flex-direction:column;gap:6px;}
+.links-preview-item{display:flex;align-items:center;gap:9px;padding:8px 12px;background:var(--surface);border:1px solid var(--border);border-radius:7px;font-size:14px;}
+.links-preview-nombre{font-weight:600;color:var(--text);flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
+.links-preview-del{background:none;border:none;cursor:pointer;color:var(--accent);font-size:16px;padding:0;flex-shrink:0;}
+.idx-search-wrap{position:relative;margin-bottom:9px;}
+.idx-search-wrap input{width:100%;padding:10px 14px 10px 38px;border-radius:8px;border:1px solid var(--border);font-size:15px;font-family:"IBM Plex Sans",sans-serif;color:var(--text);background:white;}
+.idx-search-icon{position:absolute;left:12px;top:50%;transform:translateY(-50%);font-size:16px;color:var(--subtle);}
+.idx-resultados{max-height:200px;overflow-y:auto;border:1px solid var(--border);border-radius:8px;background:white;margin-bottom:9px;display:none;}
+.idx-resultados.open{display:block;}
+.idx-resultado-item{padding:10px 14px;cursor:pointer;border-bottom:1px solid var(--border);font-size:15px;color:var(--text);}
+.idx-resultado-item:last-child{border-bottom:none;}
+.idx-resultado-item:hover{background:#F5F3FF;}
+.idx-resultado-titulo{font-weight:600;color:#5B21B6;}
+.idx-resultado-meta{font-size:13px;color:var(--muted);margin-top:3px;}
+.idx-seleccionado{display:flex;align-items:center;gap:9px;padding:10px 14px;background:#F5F3FF;border:1px solid #DDD6FE;border-radius:8px;font-size:15px;color:#5B21B6;font-weight:600;}
+.idx-seleccionado button{background:none;border:none;cursor:pointer;color:#7C3AED;font-size:17px;padding:0;margin-left:auto;}
+/* Autocompletado region */
+.region-wrap{position:relative;}
+.region-sugs{position:absolute;top:100%;left:0;right:0;background:white;border:1px solid var(--border);border-radius:8px;max-height:200px;overflow-y:auto;z-index:100;display:none;box-shadow:0 8px 24px rgba(0,0,0,0.12);}
+.region-sugs.open{display:block;}
+.region-sug-item{padding:10px 14px;cursor:pointer;font-size:15px;color:var(--text);border-bottom:1px solid var(--border);}
+.region-sug-item:last-child{border-bottom:none;}
+.region-sug-item:hover{background:#EFF6FF;color:var(--blue);}
+.region-sug-item strong{color:var(--blue);}
+.empty{text-align:center;padding:36px;color:var(--subtle);font-size:18px;}
+.divider{border:none;border-top:1px solid var(--border);margin:20px 0;}
+.etiq-bar{display:flex;align-items:center;gap:9px;margin-bottom:12px;font-size:15px;color:var(--muted);flex-wrap:wrap;}
+.etiq-chip{display:inline-flex;align-items:center;gap:6px;padding:5px 13px;background:#DBEAFE;border-radius:20px;font-size:14px;font-weight:600;color:#1D4ED8;}
+.etiq-chip button{background:none;border:none;cursor:pointer;color:#1D4ED8;font-size:15px;padding:0;line-height:1;}
+.overlay{position:fixed;inset:0;background:rgba(0,0,0,0.45);display:none;align-items:flex-start;justify-content:center;z-index:200;padding:24px 16px;overflow-y:auto;}
+.overlay.open{display:flex;}
+.modal{background:white;border-radius:14px;border:1px solid var(--border);padding:28px;width:700px;max-width:95vw;box-shadow:0 25px 60px rgba(0,0,0,0.22);margin:auto;}
+.modal-title{font-size:22px;font-weight:700;color:var(--text);margin-bottom:6px;}
+.modal-sub{font-size:17px;color:var(--muted);margin-bottom:20px;}
+.form-section{margin-bottom:20px;}
+.form-section-title{font-size:14px;font-weight:700;color:var(--subtle);text-transform:uppercase;letter-spacing:1px;margin-bottom:12px;padding-bottom:6px;border-bottom:1px solid var(--border);}
+.fg{margin-bottom:15px;}
+.fg label{font-size:17px;color:var(--text);margin-bottom:6px;display:flex;align-items:center;gap:6px;font-weight:600;}
+.fg label .req{color:var(--accent);font-size:14px;}
+.fg input,.fg select,.fg textarea{width:100%;padding:11px 14px;border-radius:8px;border:1px solid var(--border);font-size:17px;font-family:"IBM Plex Sans",sans-serif;color:var(--text);background:white;}
+.fg input.error,.fg select.error,.fg textarea.error{border-color:var(--accent);box-shadow:0 0 0 3px rgba(226,75,74,0.15);}
+.fg textarea{resize:vertical;}
+.fg .hint{font-size:13px;color:var(--subtle);margin-top:4px;}
+.row2{display:grid;grid-template-columns:1fr 1fr;gap:14px;}
+.row3{display:grid;grid-template-columns:1fr 1fr 1fr;gap:14px;}
+.modal-btns{display:flex;gap:9px;justify-content:flex-end;margin-top:6px;}
+.btn-cancel{padding:11px 22px;border-radius:8px;background:var(--surface);border:1px solid var(--border);font-size:17px;cursor:pointer;color:var(--muted);font-family:"IBM Plex Sans",sans-serif;}
+.btn-save{padding:11px 22px;border-radius:8px;background:var(--blue-light);border:1px solid #BAE6FD;font-size:17px;cursor:pointer;color:var(--blue);font-weight:700;font-family:"IBM Plex Sans",sans-serif;}
+.btn-update{padding:11px 22px;border-radius:8px;background:#ECFDF5;border:1px solid #A7F3D0;font-size:17px;cursor:pointer;color:var(--green);font-weight:700;font-family:"IBM Plex Sans",sans-serif;}
+.riesgo-desc{display:none;padding:11px 14px;border-radius:8px;font-size:15px;line-height:1.6;margin-top:-8px;margin-bottom:15px;border-left:3px solid;}
+.riesgo-desc.visible{display:block;}
+.rd-bajo{background:var(--riesgo-bajo-bg);border-color:var(--riesgo-bajo);color:#14532D;}
+.rd-inter{background:var(--riesgo-inter-bg);border-color:var(--riesgo-inter);color:var(--warning-text);}
+.rd-inm{background:var(--riesgo-inm-bg);border-color:var(--riesgo-inm);color:#7C2D12;}
+.rd-crit{background:var(--riesgo-crit-bg);border-color:var(--riesgo-crit);color:var(--accent-text);}
+.tags-wrap{display:flex;flex-wrap:wrap;gap:6px;padding:9px 11px;border:1px solid var(--border);border-radius:8px;min-height:48px;background:white;}
+.tag-item{display:inline-flex;align-items:center;gap:5px;padding:5px 13px;background:var(--accent-tag);color:var(--accent-text);border-radius:20px;font-size:14px;font-weight:600;}
+.tag-input{border:none;outline:none;font-size:17px;font-family:"IBM Plex Sans",sans-serif;color:var(--text);min-width:100px;flex:1;padding:2px 3px;}
+.etiq-form-wrap{display:flex;flex-wrap:wrap;gap:6px;padding:9px 11px;border:1px solid var(--border);border-radius:8px;min-height:48px;background:white;}
+.etiq-form-item{display:inline-flex;align-items:center;gap:5px;padding:5px 13px;background:#DBEAFE;color:#1D4ED8;border-radius:20px;font-size:14px;font-weight:700;}
+.etiq-form-input{border:none;outline:none;font-size:16px;font-family:"IBM Plex Sans",sans-serif;color:var(--text);min-width:100px;flex:1;padding:2px 3px;}
+.etiq-sugs{display:flex;flex-wrap:wrap;gap:6px;margin-top:7px;}
+.etiq-sug{padding:4px 12px;border-radius:20px;font-size:13px;font-weight:700;cursor:pointer;background:#F0FDF4;color:var(--green);border:1px solid #86EFAC;}
+.disp-list-form{display:flex;flex-direction:column;gap:9px;margin-bottom:10px;}
+.disp-item-form{display:flex;gap:9px;align-items:flex-start;}
+.disp-num-form{width:32px;height:32px;border-radius:50%;background:var(--green);color:white;font-size:15px;font-weight:700;display:flex;align-items:center;justify-content:center;flex-shrink:0;margin-top:6px;}
+.disp-fields{flex:1;display:flex;flex-direction:column;gap:6px;}
+.disp-fields input,.disp-fields textarea{font-size:15px;}
+.disp-fields textarea{height:60px;}
+.btn-add-disp{display:inline-flex;align-items:center;gap:6px;padding:9px 17px;border-radius:7px;background:var(--green-light);border:1px solid #A7F3D0;font-size:16px;font-weight:600;color:var(--green);cursor:pointer;font-family:"IBM Plex Sans",sans-serif;}
+.btn-del-disp{width:32px;height:32px;border-radius:5px;border:1px solid var(--border);background:white;cursor:pointer;font-size:14px;color:var(--accent);margin-top:6px;flex-shrink:0;}
+.toast{position:fixed;bottom:22px;right:22px;background:#1E293B;color:white;padding:12px 22px;border-radius:9px;font-size:16px;z-index:999;opacity:0;transition:opacity 0.3s;pointer-events:none;}
+.toast.show{opacity:1;}
+.confirm-overlay{position:fixed;inset:0;background:rgba(0,0,0,0.45);display:none;align-items:center;justify-content:center;z-index:300;}
+.confirm-overlay.open{display:flex;}
+.confirm-box{background:white;border-radius:12px;padding:30px;width:380px;box-shadow:0 20px 40px rgba(0,0,0,0.2);text-align:center;}
+.confirm-box p{font-size:18px;color:var(--text);margin-bottom:22px;font-weight:600;}
+.confirm-btns{display:flex;gap:11px;justify-content:center;}
+.confirm-ok{padding:11px 28px;border-radius:8px;background:#FEE2E2;border:1px solid #FECDD3;color:#DC2626;font-size:16px;font-weight:700;cursor:pointer;font-family:"IBM Plex Sans",sans-serif;}
+.confirm-cancel{padding:11px 28px;border-radius:8px;background:var(--surface);border:1px solid var(--border);color:var(--muted);font-size:16px;cursor:pointer;font-family:"IBM Plex Sans",sans-serif;}
+@media(max-width:700px){.detail-body{grid-template-columns:1fr;}.detail-left{border-right:none;border-bottom:1px solid var(--border);}.row2{grid-template-columns:1fr;}.row3{grid-template-columns:1fr;}.portal-inner{padding:18px;}.adv-row{flex-direction:column;}.norma.indexada{margin-left:16px;}.norma.indexada-nivel-2{margin-left:32px;}.norma.indexada-nivel-3{margin-left:48px;}}
+</style>
+</head>
+<body>
+<div class="portal"><div class="portal-inner">
+  <div class="top-bar">
+    <div class="bell-wrap">&#128269;</div>
+    <div style="flex:1;">
+      <div class="portal-title">VISOR &mdash; Vigilancia de Información de Sectores, Opinión y Regulaciones</div>
+      <div class="portal-sub">Facultad de Ingeniería &mdash; URP</div>
+    </div>
+  </div>
+  <button class="btn-add" id="btnAgregar">+ Agregar noticia o norma nueva</button>
+  <button class="etiq-mgr-toggle" id="btnEtiqMgr">&#127991; Gestionar etiquetas</button>
+  <div class="etiq-mgr-panel" id="etiqMgrPanel">
+    <div class="etiq-mgr-header">Gestión de etiquetas</div>
+    <div class="etiq-mgr-new">
+      <input type="text" id="etiqMgrInput" placeholder="Nueva etiqueta..." maxlength="40">
+      <button id="etiqMgrAdd">+ Agregar</button>
+    </div>
+    <div class="etiq-mgr-list" id="etiqMgrList"></div>
+  </div>
+  <div class="search-bar">
+    <div class="search-input-wrap"><span class="search-icon">&#128269;</span><input type="text" id="searchQ" placeholder="Buscar por título, descripción, fuente..."></div>
+    <button class="adv-toggle" id="btnAdv">Filtros avanzados</button>
+  </div>
+  <div class="adv-filters" id="advFilters">
+    <div class="adv-row">
+      <div class="af-group" style="flex:2;min-width:160px;"><label>Título</label><input type="text" id="af-titulo" placeholder="Buscar en título..."></div>
+      <div class="af-group" style="flex:2;min-width:160px;"><label>Descripción</label><input type="text" id="af-desc" placeholder="Buscar en descripción..."></div>
+      <div class="af-group" style="flex:1;min-width:130px;"><label>Fuente</label><input type="text" id="af-fuente" placeholder="Ej: Resolución Rectoral"></div>
+      <div class="af-group" style="flex:1;min-width:120px;"><label>Etiqueta</label><input type="text" id="af-etiq" placeholder="Ej: acreditación"></div>
+    </div>
+    <div class="adv-row">
+      <div class="af-group"><label>Estado</label><select id="af-estado"><option value="">Todos</option><option value="consulta">En consulta pública</option><option value="vigente">Vigente</option><option value="derogada">Derogada</option></select></div>
+      <div class="af-group"><label>Riesgo</label><select id="af-riesgo"><option value="">Todos</option><option value="bajo">Bajo</option><option value="intermedio">Intermedio</option><option value="inminente">Inminente</option><option value="critico">Crítico</option></select></div>
+      <div class="af-group"><label>Destacado</label><select id="af-dest"><option value="">Todos</option><option value="si">Solo destacados</option><option value="no">Sin destacar</option></select></div>
+      <div class="af-group"><label>Fecha desde</label><input type="date" id="af-fec-desde"></div>
+      <div class="af-group"><label>Fecha hasta</label><input type="date" id="af-fec-hasta"></div>
+      <button class="btn-clear-adv" id="btnClearAdv">Limpiar</button>
+    </div>
+  </div>
+  <div class="etiq-bar" id="etiqBar" style="display:none;">
+    <span>Filtrando por:</span>
+    <span class="etiq-chip"><span id="etiqBarLabel"></span><button id="btnClearEtiq">x</button></span>
+  </div>
+  <div class="filters" id="filtros">
+    <button class="fbtn on" data-fil="todas">Todas</button>
+    <button class="fbtn" data-fil="nuevas">Últimas 48h</button>
+    <button class="fbtn" data-fil="arch">Archivo histórico</button>
+    <button class="fbtn" data-fil="consulta">En consulta pública</button>
+    <button class="fbtn" data-fil="riesgo">Con alerta Facultad de Ingeniería - URP</button>
+    <button class="fbtn" data-fil="destacados">Destacados</button>
+  </div>
+  <div id="lista"></div>
+</div></div>
+
+<div class="toast" id="toast"></div>
+<div class="confirm-overlay" id="confirmOverlay">
+  <div class="confirm-box">
+    <p id="confirmMsg">Eliminar esta alerta?</p>
+    <div class="confirm-btns">
+      <button class="confirm-ok" id="confirmOk">Eliminar</button>
+      <button class="confirm-cancel" id="confirmCancel">Cancelar</button>
+    </div>
+  </div>
+</div>
+
+<div class="overlay" id="modal"><div class="modal">
+  <div class="modal-title" id="modalTitle">Registrar nueva noticia o norma</div>
+  <div class="modal-sub" id="modalSub">Complete los campos obligatorios (<span style="color:var(--accent)">*</span>).</div>
+  <div class="form-section">
+    <div class="form-section-title">Indexar a noticia principal <span style="font-weight:400;color:var(--muted);font-size:12px;text-transform:none;">(opcional)</span></div>
+    <div class="idx-search-wrap"><span class="idx-search-icon">&#128269;</span><input type="text" id="idx-buscar" placeholder="Buscar noticia principal..."></div>
+    <div class="idx-resultados" id="idx-resultados"></div>
+    <div id="idx-seleccionado-wrap"></div>
+    <div class="hint">Si esta noticia es continuación de otra, seleccionala aqui.</div>
+  </div>
+  <div class="form-section">
+    <div class="form-section-title">Datos de la noticia o norma</div>
+    <div class="fg"><label>Título <span class="req">*</span></label><input type="text" id="f-tit" placeholder="Ej: Reglamento..."></div>
+    <div class="fg"><label>Fuente</label><input type="text" id="f-rm" placeholder="Ej: Resolución Rectoral"></div>
+    <div class="row2">
+      <div class="fg"><label>Estado</label><select id="f-est"><option value="">Sin especificar</option><option value="consulta">En consulta pública</option><option value="vigente">Vigente</option><option value="derogada">Derogada</option></select></div>
+    </div>
+    <div class="row3">
+      <div class="fg"><label>Fecha <span class="req">*</span></label><input type="date" id="f-fec"></div>
+      <div class="fg"><label>Hora <span style="font-size:13px;font-weight:400;color:var(--subtle);">(opcional)</span></label><input type="time" id="f-hora"></div>
+      <div class="fg">
+        <label>Región</label>
+        <div class="region-wrap">
+          <input type="text" id="f-region" placeholder="Ej: Lor..." autocomplete="off">
+          <div class="region-sugs" id="region-sugs"></div>
+        </div>
+        <div class="hint">Escribe las primeras letras.</div>
+      </div>
+    </div>
+    <div class="fg"><label>URL</label><input type="text" id="f-url" placeholder="https://..."></div>
+    <div class="fg"><label>Video <span style="font-weight:400;color:var(--muted);font-size:12px;">(opcional)</span></label><input type="text" id="f-video" placeholder="Link de YouTube, Facebook, etc."></div>
+    <div class="fg"><label>Descripción <span class="req">*</span></label><textarea id="f-desc" style="height:80px;" placeholder="Resumen general..."></textarea></div>
+    <div class="fg">
+      <label>Etiquetas personalizadas</label>
+      <div class="etiq-form-wrap" id="etiq-form-wrap"></div>
+      <div class="etiq-sugs" id="etiq-sugs"></div>
+      <div class="hint">Presiona Enter para agregar.</div>
+    </div>
+  </div>
+  <div class="form-section">
+    <div class="form-section-title">Archivos adjuntos</div>
+    <div class="link-input-wrap">
+      <input type="text" id="f-link-url" placeholder="Link de Drive, OneDrive, etc.">
+      <input type="text" id="f-link-nombre" placeholder="Nombre del archivo">
+      <button class="btn-add-link" id="btnAddLink">+ Agregar</button>
+    </div>
+    <div class="links-preview-list" id="linksPreviewList"></div>
+    <div class="hint">Sube el archivo a Google Drive, copia el link y pegalo aqui.</div>
+  </div>
+  <div class="form-section">
+    <div class="form-section-title">Disposiciones principales</div>
+    <div id="disps-list" class="disp-list-form"></div>
+    <button class="btn-add-disp" id="btnAddDisp">+ Agregar disposición</button>
+  </div>
+  <div class="form-section">
+    <div class="form-section-title">Análisis FI-URP</div>
+    <div class="fg"><label>Nivel de riesgo</label>
+      <select id="f-riesgo"><option value="ninguno">Sin alerta</option><option value="bajo">Riesgo Bajo</option><option value="intermedio">Riesgo Intermedio</option><option value="inminente">Riesgo Inminente</option><option value="critico">Riesgo Crítico</option></select>
+    </div>
+    <div id="riesgo-desc-box" class="riesgo-desc"></div>
+    <div class="fg"><label>Descripción del riesgo</label><textarea id="f-conflicto" style="height:80px;" placeholder="Describe el posible riesgo..."></textarea></div>
+    <div class="fg"><label>Actores</label><div class="tags-wrap" id="focos-wrap"></div><div class="hint">Presiona Enter para agregar cada actor.</div></div>
+    <div class="fg"><label>Acción recomendada</label><textarea id="f-acrecom" style="height:70px;" placeholder="Acción recomendada..."></textarea></div>
+  </div>
+  <div class="modal-btns">
+    <button class="btn-cancel" id="btnCancelar">Cancelar</button>
+    <button class="btn-update" id="btnActualizar" style="display:none;">Guardar cambios</button>
+    <button class="btn-save" id="btnGuardar">Guardar</button>
+  </div>
+</div></div>
+
+<script>
+var SU = "<?= PROXY_URL ?>";
+var ABRIR_ID = "<?= ABRIR_NOTICIA ?>";
+
+var REGIONES = [
+  'Amazonas','Ancash','Apurimac','Arequipa','Ayacucho','Cajamarca',
+  'Callao','Cusco','Huancavelica','Huanuco','Ica','Junin',
+  'La Libertad','Lambayeque','Lima (Provincias)','Lima Metropolitana',
+  'Loreto','Madre de Dios','Moquegua','Pasco','Piura','Puno',
+  'San Martin','Tacna','Tumbes','Ucayali'
+];
+
+var RI = {
+  bajo:{label:"Riesgo Bajo",cls:"b-riesgo-bajo",rcls:"rd-bajo",dot:"#16A34A",bgRow:"#DCFCE7",bRow:"#BBF7D0",def:"Conflicto en manifestacion temprana.",ec:"et-bajo"},
+  intermedio:{label:"Riesgo Intermedio",cls:"b-riesgo-inter",rcls:"rd-inter",dot:"#D97706",bgRow:"#FEF9C3",bRow:"#FDE68A",def:"Conflicto en manifestacion abierta.",ec:"et-inter"},
+  inminente:{label:"Riesgo Inminente",cls:"b-riesgo-inm",rcls:"rd-inm",dot:"#EA580C",bgRow:"#FFF7ED",bRow:"#FED7AA",def:"Conflicto en Pre-crisis.",ec:"et-inm"},
+  critico:{label:"Riesgo Critico",cls:"b-riesgo-crit",rcls:"rd-crit",dot:"#DC2626",bgRow:"#FEE2E2",bRow:"#FECDD3",def:"Conflicto en situacion de crisis.",ec:"et-crit"}
+};
+var NM=[],FL="todas",EX={},HX={},FC=[],FE=[],FA=[],PCB=null,EID=null,EFO=null,EFI=null,AO=false,RIESGO_ORIGINAL=null,PADRE_ID=null;
+var ETIQ_EXTRA=[];
+
+function pf(f){try{var s=String(f).split(" ")[0].split("/");if(s.length===3)return new Date(parseInt(s[2]),parseInt(s[1])-1,parseInt(s[0]));return new Date(0);}catch(e){return new Date(0);}}
+function is48(n){return(Date.now()-pf(n.fecha).getTime())<48*3600*1000;}
+function srt(arr){return arr.slice().sort(function(a,b){return pf(b.fecha)-pf(a.fecha);});}
+function srtAsc(arr){return arr.slice().sort(function(a,b){return pf(a.fecha)-pf(b.fecha);});}
+function esc(s){return String(s).replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;").replace(/"/g,"&quot;").replace(/'/g,"&#39;");}
+function tst(msg){var t=document.getElementById("toast");t.textContent=msg;t.classList.add("show");setTimeout(function(){t.classList.remove("show");},3000);}
+function sfc(msg,ok){document.getElementById("confirmMsg").textContent=msg;document.getElementById("confirmOverlay").classList.add("open");PCB=ok;}
+
+// ✅ Detectar tipo de URL para icono de red social
+function detectarTipoUrl(url){
+  if(!url)return null;
+  var u=url.toLowerCase();
+  if(u.indexOf('facebook.com')>-1||u.indexOf('fb.com')>-1)return'fb';
+  if(u.indexOf('instagram.com')>-1)return'ig';
+  if(u.indexOf('youtube.com')>-1||u.indexOf('youtu.be')>-1)return'yt';
+  if(u.indexOf('twitter.com')>-1||u.indexOf('x.com')>-1)return'tw';
+  if(u.indexOf('wa.me')>-1||u.indexOf('whatsapp')>-1)return'wa';
+  return null;
+}
+
+// ✅ Extraer Drive file ID para thumbnail
+function driveThumb(url){
+  if(!url)return null;
+  var m=url.match(/\/d\/([a-zA-Z0-9_-]{10,})/)||url.match(/id=([a-zA-Z0-9_-]{10,})/);
+  return m?'https://drive.google.com/thumbnail?id='+m[1]+'&sz=w400':null;
+}
+
+// ✅ Icono de tarjeta: imagen adjunta > red social > area
+function buildNormaIcon(n, nivel){
+  var sm=nivel>0?' sm':'';
+  // 1. Intentar imagen desde archivos adjuntos
+  var archs=n.archivos||[];
+  for(var i=0;i<archs.length;i++){
+    var u=archs[i].viewUrl||'';
+    if(u.match(/\.(jpg|jpeg|png|gif|webp)(\?|$)/i)){
+      return "<div class='norma-icon"+sm+"'><img src='"+esc(u)+"' alt='' onerror='this.parentNode.innerHTML=\"&#128220;\"'></div>";
+    }
+    var th=driveThumb(u);
+    if(th){
+      return "<div class='norma-icon"+sm+"'><img src='"+th+"' alt='' onerror='this.parentNode.innerHTML=\"&#128220;\"'></div>";
+    }
+  }
+  // 2. Icono de red social por URL
+  var tipo=detectarTipoUrl(n.url);
+  if(tipo){
+    var labels={fb:'f',ig:'&#9679;',yt:'&#9654;',tw:'t',wa:'w'};
+    return "<div class='norma-icon"+sm+" "+tipo+"'>"+labels[tipo]+"</div>";
+  }
+  // 3. Icono genérico de normativa
+  var ico='&#128220;';
+  return "<div class='norma-icon"+sm+"'>"+ico+"</div>";
+}
+
+function mimeIcon(url){return"&#128206;";}
+function esImagen(url){return !!(url&&url.match(/\.(jpg|jpeg|png|gif|webp)(\?|$)/i));}
+
+function getHijos(padreId){return srtAsc(NM.filter(function(n){return String(n.padreId)===String(padreId)&&!n.arch;}));}
+function esRaiz(n){return !n.padreId||String(n.padreId).trim()==='';}
+function getNivel(n){var nivel=0,curr=n;while(curr&&curr.padreId&&String(curr.padreId).trim()!==''){nivel++;curr=NM.find(function(x){return String(x.id)===String(curr.padreId);});if(nivel>10)break;}return nivel;}
+
+// ✅ Autocompletado de region
+function initRegionAutocomplete(){
+  var inp=document.getElementById("f-region");
+  var sugs=document.getElementById("region-sugs");
+  inp.oninput=function(){
+    var q=this.value.trim().toLowerCase();
+    sugs.innerHTML="";
+    if(q.length<1){sugs.classList.remove("open");return;}
+    var filtradas=REGIONES.filter(function(r){return r.toLowerCase().indexOf(q)>-1;});
+    if(!filtradas.length){sugs.classList.remove("open");return;}
+    filtradas.forEach(function(r){
+      var item=document.createElement("div");
+      item.className="region-sug-item";
+      var idx=r.toLowerCase().indexOf(q);
+      var html=esc(r.substring(0,idx))+'<strong>'+esc(r.substring(idx,idx+q.length))+'</strong>'+esc(r.substring(idx+q.length));
+      item.innerHTML=html;
+      item.onclick=function(){inp.value=r;sugs.classList.remove("open");sugs.innerHTML="";};
+      sugs.appendChild(item);
+    });
+    sugs.classList.add("open");
+  };
+  inp.onblur=function(){setTimeout(function(){sugs.classList.remove("open");},200);};
+  inp.onfocus=function(){if(this.value.trim().length>0)inp.oninput();};
+}
+
+function bloqueWA(noticia,prefijo,profundidad){
+  if(profundidad>3)return'';
+  var txt='';
+  var f=String(noticia.fecha||''),h=String(noticia.hora||'');
+  txt+=prefijo+'*'+noticia.titulo+'*\n';
+  if(noticia.rm)txt+=prefijo+'_Fuente: '+noticia.rm+'_\n';
+  txt+=prefijo+'_'+f+(h?' '+h:'')+'_\n';
+  if(noticia.desc)txt+=prefijo+(noticia.desc.length>100?noticia.desc.substring(0,100)+'...':noticia.desc)+'\n';
+  var hijos=NM.filter(function(x){return String(x.padreId)===String(noticia.id)&&!x.arch;});
+  if(hijos.length){
+    txt+=prefijo+'  *'+hijos.length+' nota'+(hijos.length>1?'s relacionadas':' relacionada')+'*\n';
+    for(var i=0;i<hijos.length;i++)txt+=prefijo+'  '+(i+1)+'. '+bloqueWA(hijos[i],prefijo+'     ',profundidad+1);
+  }
+  return txt;
+}
+
+function waUrl(n){
+  var riLabels={bajo:'Riesgo Bajo',intermedio:'Riesgo Intermedio',inminente:'*[!] RIESGO INMINENTE*',critico:'*[!!] RIESGO CRITICO*'};
+  var fecha=String(n.fecha||''),hora=String(n.hora||'');
+  var msg='';
+  if(n.video){msg+=n.video+'\n\n';}
+  msg+='*VISOR - Facultad de Ingeniería - URP*\n';
+  msg+='_Vigilancia de Informacion de Sectores, Opinion y Regulaciones_\n\n';
+  msg+='*'+n.titulo+'*\n\n';
+  if(n.rm)msg+='*Fuente:* '+n.rm+'\n';
+  msg+='*Fecha:* '+fecha+(hora?' - '+hora:'')+'\n';
+  if(n.region)msg+='*Region:* '+n.region+'\n';
+  if(n.estado&&n.estado!==''){
+    var estados={consulta:'En consulta publica',vigente:'Vigente',derogada:'Derogada'};
+    if(estados[n.estado])msg+='*Estado:* '+estados[n.estado]+'\n';
+  }
+  msg+='\n';
+  if(n.desc){msg+='*Descripción*\n';msg+=n.desc+'\n\n';}
+  var ds=n.disposiciones||[];
+  if(ds.length){
+    msg+='*Disposiciones principales*\n';
+    for(var i=0;i<ds.length;i++){msg+=(i+1)+'. *'+ds[i].t+'*';if(ds[i].d)msg+='\n   _'+ds[i].d+'_';msg+='\n';}
+    msg+='\n';
+  }
+  var rd=n.riesgoDetalle||{};
+  if(rd.conflicto){msg+='*Descripción del riesgo*\n'+rd.conflicto+'\n\n';}
+  if(n.riesgo&&riLabels[n.riesgo]){
+    msg+='*Análisis FI-URP*\n';
+    msg+='Nivel: '+riLabels[n.riesgo]+'\n';
+    if(rd.focos&&rd.focos.length)msg+='Actores: _'+rd.focos.join(' / ')+'_\n';
+    if(rd.acrecom)msg+='Acción recomendada: '+rd.acrecom+'\n';
+    msg+='\n';
+  }
+  var archs=n.archivos||[];
+  if(archs.length){
+    msg+='*Archivos adjuntos*\n';
+    for(var j=0;j<archs.length;j++)msg+='  - '+archs[j].nombre+'\n    '+archs[j].viewUrl+'\n';
+    msg+='\n';
+  }
+  var hijos=NM.filter(function(x){return String(x.padreId)===String(n.id)&&!x.arch;});
+  if(hijos.length){
+    msg+='*'+hijos.length+' nota'+(hijos.length>1?'s relacionadas':' relacionada')+'*\n\n';
+    for(var k=0;k<hijos.length;k++)msg+=(k+1)+'. '+bloqueWA(hijos[k],'   ',1)+'\n';
+  }
+  if(n.url){msg+='*Enlace a la publicacion:*\n'+n.url+'\n\n';}
+  msg+='*Ver en el portal VISOR:*\n';
+  msg+=SU+'?abrir='+String(n.id)+'\n\n';
+  msg+='_Universidad Ricardo Palma - Facultad de Ingeniería_';
+  return'https://wa.me/?text='+encodeURIComponent(msg);
+}
+
+document.getElementById("btnAddLink").onclick=function(){
+  var url=document.getElementById("f-link-url").value.trim();
+  var nombre=document.getElementById("f-link-nombre").value.trim();
+  if(!url){tst("Pega un link primero");return;}
+  if(!nombre)nombre="Archivo adjunto "+(FA.length+1);
+  FA.push({nombre:nombre,viewUrl:url,downloadUrl:url,mime:'',thumbUrl:''});
+  document.getElementById("f-link-url").value="";
+  document.getElementById("f-link-nombre").value="";
+  rndLinksPreview();tst("Archivo agregado");
+};
+
+function rndLinksPreview(){
+  var wrap=document.getElementById("linksPreviewList");wrap.innerHTML="";
+  FA.forEach(function(a,idx){
+    var item=document.createElement("div");item.className="links-preview-item";
+    var urlCorta=a.viewUrl.length>45?a.viewUrl.substring(0,45)+"...":a.viewUrl;
+    item.innerHTML="<span style='font-size:20px;'>"+mimeIcon(a.viewUrl)+"</span>"+
+      "<span class='links-preview-nombre'>"+esc(a.nombre)+"</span>"+
+      "<span style='font-size:13px;color:var(--blue);flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;'>"+esc(urlCorta)+"</span>"+
+      "<button class='links-preview-del' type='button'>X</button>";
+    item.querySelector(".links-preview-del").onclick=function(){FA.splice(idx,1);rndLinksPreview();};
+    wrap.appendChild(item);
+  });
+}
+
+document.getElementById("idx-buscar").oninput=function(){
+  var q=this.value.trim().toLowerCase();
+  var res=document.getElementById("idx-resultados");
+  if(q.length<2){res.classList.remove("open");res.innerHTML="";return;}
+  var encontrados=NM.filter(function(n){
+    if(EID&&String(n.id)===String(EID))return false;
+    return(n.titulo||"").toLowerCase().indexOf(q)>-1||(n.desc||"").toLowerCase().indexOf(q)>-1;
+  }).slice(0,6);
+  if(!encontrados.length){res.innerHTML="<div class='idx-resultado-item' style='color:var(--subtle);'>No se encontraron noticias.</div>";res.classList.add("open");return;}
+  res.innerHTML=encontrados.map(function(n){
+    var nivel=getNivel(n);var nivelTxt=nivel>0?" (nivel "+nivel+")":" ";
+    return"<div class='idx-resultado-item' onclick='seleccionarPadre(\""+String(n.id)+"\")'><div class='idx-resultado-titulo'>"+esc(n.titulo)+nivelTxt+"</div><div class='idx-resultado-meta'>"+esc(n.rm||"Sin fuente")+" - "+(n.fecha||"")+"</div></div>";
+  }).join("");
+  res.classList.add("open");
+};
+
+function seleccionarPadre(id){var n=NM.find(function(x){return String(x.id)===String(id);});if(!n)return;PADRE_ID=String(id);document.getElementById("idx-buscar").value="";document.getElementById("idx-resultados").classList.remove("open");document.getElementById("idx-resultados").innerHTML="";rndIdxSeleccionado();}
+function rndIdxSeleccionado(){var wrap=document.getElementById("idx-seleccionado-wrap");wrap.innerHTML="";if(!PADRE_ID)return;var n=NM.find(function(x){return String(x.id)===String(PADRE_ID);});var titulo=n?n.titulo:"Noticia #"+PADRE_ID;var div=document.createElement("div");div.className="idx-seleccionado";div.innerHTML="Indexada a: <strong style='margin-left:5px;'>"+esc(titulo)+"</strong>";var btn=document.createElement("button");btn.type="button";btn.textContent="X";btn.onclick=function(){PADRE_ID=null;rndIdxSeleccionado();};div.appendChild(btn);wrap.appendChild(div);}
+
+document.getElementById("confirmOk").onclick=function(){document.getElementById("confirmOverlay").classList.remove("open");if(PCB){PCB();PCB=null;}};
+document.getElementById("confirmCancel").onclick=function(){document.getElementById("confirmOverlay").classList.remove("open");PCB=null;};
+document.getElementById("btnAdv").onclick=function(){AO=!AO;document.getElementById("advFilters").classList.toggle("open",AO);document.getElementById("btnAdv").classList.toggle("open",AO);};
+document.getElementById("btnClearAdv").onclick=function(){["searchQ","af-titulo","af-desc","af-fuente","af-etiq"].forEach(function(id){document.getElementById(id).value="";});["af-estado","af-riesgo","af-dest"].forEach(function(id){document.getElementById(id).value="";});document.getElementById("af-fec-desde").value="";document.getElementById("af-fec-hasta").value="";render();};
+document.getElementById("btnClearEtiq").onclick=function(){EFI=null;document.getElementById("etiqBar").style.display="none";render();};
+document.getElementById("searchQ").oninput=function(){render();};
+["af-titulo","af-desc","af-fuente","af-etiq"].forEach(function(id){document.getElementById(id).oninput=function(){render();};});
+["af-estado","af-riesgo","af-dest","af-fec-desde","af-fec-hasta"].forEach(function(id){document.getElementById(id).onchange=function(){render();};});
+
+function setEF(e){EFI=e;document.getElementById("etiqBar").style.display="flex";document.getElementById("etiqBarLabel").textContent=e;render();}
+function rndEtiqMgr(){
+  var list=document.getElementById("etiqMgrList");
+  if(!list)return;
+  var t={};
+  NM.forEach(function(n){(n.etiquetas||[]).forEach(function(e){t[e]=(t[e]||0)+1;});});
+  ETIQ_EXTRA.forEach(function(e){if(!t[e])t[e]=0;});
+  var eu=Object.keys(t).sort();
+  if(!eu.length){list.innerHTML="<span class='etiq-mgr-empty'>No hay etiquetas aún</span>";return;}
+  list.innerHTML=eu.map(function(e){
+    return "<span class='etiq-mgr-item'>"
+      +"<span class='en'>"+esc(e)+"</span>"
+      +(t[e]>0?"<span class='etiq-cnt'>"+t[e]+"</span>":"<span class='etiq-cnt'>0</span>")
+      +"<button class='etiq-eb' onclick='etiqRn(this)' title='Renombrar'>&#9998;</button>"
+      +"<button class='etiq-db' onclick='etiqDel(this)' title='Eliminar'>&#x2715;</button>"
+      +"</span>";
+  }).join("");
+}
+function etiqDel(btn){
+  var nombre=btn.parentNode.querySelector(".en").textContent;
+  if(!confirm("¿Eliminar \""+nombre+"\" de todas las alertas?"))return;
+  var af=[];
+  NM.forEach(function(n){
+    if(n.etiquetas&&n.etiquetas.indexOf(nombre)>-1){
+      n.etiquetas=n.etiquetas.filter(function(e){return e!==nombre;});
+      af.push(n);
+    }
+  });
+  af.forEach(function(n){updSheet(n,null);});
+  ETIQ_EXTRA=ETIQ_EXTRA.filter(function(e){return e!==nombre;});
+  render();rndEtiqMgr();
+  tst("Eliminada de "+af.length+" alerta"+(af.length!==1?"s":""));
+}
+function etiqRn(btn){
+  var item=btn.parentNode;
+  var viejo=item.querySelector(".en").textContent;
+  item.innerHTML="<input class='etiq-ii' id='etiq-ri' value='"+esc(viejo)+"' maxlength='40'>"
+    +"<button class='etiq-eb' onclick='etiqRnOk(this,\""+viejo.replace(/"/g,"&quot;")+"\")'>&#10004;</button>"
+    +"<button class='etiq-db' onclick='rndEtiqMgr()'>&#x2715;</button>";
+  var inp=document.getElementById("etiq-ri");
+  if(inp)inp.focus();
+}
+function etiqRnOk(btn,viejo){
+  var inp=btn.parentNode.querySelector("input");
+  var nuevo=inp?inp.value.trim():"";
+  if(!nuevo){tst("El nombre no puede estar vacío");return;}
+  if(nuevo===viejo){rndEtiqMgr();return;}
+  var af=[];
+  NM.forEach(function(n){
+    if(n.etiquetas&&n.etiquetas.indexOf(viejo)>-1){
+      n.etiquetas=n.etiquetas.map(function(e){return e===viejo?nuevo:e;});
+      af.push(n);
+    }
+  });
+  af.forEach(function(n){updSheet(n,null);});
+  render();rndEtiqMgr();
+  tst("Renombrada en "+af.length+" alerta"+(af.length!==1?"s":""));
+}
+function getEU(){var t={};NM.forEach(function(n){(n.etiquetas||[]).forEach(function(e){t[e]=(t[e]||0)+1;});});return Object.keys(t).sort();}
+
+function mSrch(n){
+  var q=document.getElementById("searchQ").value.trim().toLowerCase();
+  var aT=document.getElementById("af-titulo").value.trim().toLowerCase();
+  var aD=document.getElementById("af-desc").value.trim().toLowerCase();
+  var aF=document.getElementById("af-fuente").value.trim().toLowerCase();
+  var aE=document.getElementById("af-etiq").value.trim().toLowerCase();
+  var aEs=document.getElementById("af-estado").value;
+  var aR=document.getElementById("af-riesgo").value;
+  var aDe=document.getElementById("af-dest").value;
+  var aFD=document.getElementById("af-fec-desde").value;
+  var aFH=document.getElementById("af-fec-hasta").value;
+  if(q){var ok=(n.titulo||"").toLowerCase().indexOf(q)>-1||(n.desc||"").toLowerCase().indexOf(q)>-1||(n.rm||"").toLowerCase().indexOf(q)>-1||(n.region||"").toLowerCase().indexOf(q)>-1||(n.etiquetas||[]).some(function(e){return e.toLowerCase().indexOf(q)>-1;});if(!ok)return false;}
+  if(aT&&(n.titulo||"").toLowerCase().indexOf(aT)===-1)return false;
+  if(aD&&(n.desc||"").toLowerCase().indexOf(aD)===-1)return false;
+  if(aF&&(n.rm||"").toLowerCase().indexOf(aF)===-1)return false;
+  if(aE){var te=(n.etiquetas||[]).some(function(e){return e.toLowerCase().indexOf(aE)>-1;});if(!te)return false;}
+  if(aEs&&n.estado!==aEs)return false;
+  if(aR&&n.riesgo!==aR)return false;
+  if(aDe==="si"&&!n.destacado)return false;
+  if(aDe==="no"&&n.destacado)return false;
+  if(aFD||aFH){var dN=pf(n.fecha);if(aFD){var pd=aFD.split("-");if(dN<new Date(parseInt(pd[0]),parseInt(pd[1])-1,parseInt(pd[2])))return false;}if(aFH){var ph=aFH.split("-");if(dN>new Date(parseInt(ph[0]),parseInt(ph[1])-1,parseInt(ph[2]),23,59,59))return false;}}
+  if(EFI){var em=(n.etiquetas||[]).some(function(e){return e===EFI;});if(!(em||(n.rm||"")===EFI))return false;}
+  return true;
+}
+
+function flt(arr){
+  var base;
+  if(FL==="nuevas")base=arr.filter(function(n){return is48(n)&&!n.arch;});
+  else if(FL==="arch")base=arr.filter(function(n){return n.arch;});
+  else if(FL==="consulta")base=arr.filter(function(n){return n.estado==="consulta";});
+  else if(FL==="riesgo")base=arr.filter(function(n){return RI[n.riesgo];});
+  else if(FL==="destacados")base=arr.filter(function(n){return n.destacado;});
+  else base=arr;
+  return base.filter(mSrch);
+}
+
+function render(){
+  var raices=NM.filter(function(n){return esRaiz(n)&&!n.arch;});
+  var archRaices=NM.filter(function(n){return esRaiz(n)&&n.arch;});
+  var destAll=raices.filter(function(n){return n.destacado;});
+  var recAll=raices.filter(function(n){return!n.destacado;});
+  var destF=flt(destAll),recF=flt(recAll),archF=flt(archRaices);
+  var o="";
+  if((FL==="todas"||FL==="destacados")&&destF.length>0){
+    o+="<div class='section-dest'><div class='section-lbl' style='margin-bottom:12px;'>Destacados ("+destF.length+")</div>";
+    o+=srt(destF).map(function(n){return cardConHilo(n,0);}).join("");o+="</div>";
+  }
+  if(FL!=="arch"&&FL!=="destacados"){
+    if(FL==="todas"){
+      o+="<div class='section-lbl'>Alertas recientes ("+recF.length+")</div>";
+      o+=recF.length?srt(recF).map(function(n){return cardConHilo(n,0);}).join(""):"<div class='empty'>No hay alertas registradas.</div>";
+    } else {
+      var todos=srt(flt(raices));
+      o+="<div class='section-lbl'>Resultados ("+todos.length+")</div>";
+      o+=todos.length?todos.map(function(n){return cardConHilo(n,0);}).join(""):"<div class='empty'>No hay alertas que coincidan.</div>";
+    }
+  }
+  if(FL==="destacados"&&destF.length===0)o+="<div class='empty'>No hay alertas destacadas.</div>";
+  if((FL==="todas"||FL==="arch")&&archF.length){
+    o+="<hr class='divider'><div class='section-lbl'>Archivo histórico ("+archF.length+")</div>";
+    o+=srt(archF).map(function(n){return cardConHilo(n,0);}).join("");
+  }
+  document.getElementById("lista").innerHTML=o||"<div class='empty'>No hay resultados.</div>";
+}
+
+function cardConHilo(n,nivel){
+  var idStr=String(n.id);
+  var hijos=getHijos(idStr);
+  if(hijos.length>0&&HX[idStr]===undefined)HX[idStr]=true;
+  var hiloAbierto=!!HX[idStr];
+  var html=card(n,NM.indexOf(n),nivel);
+  if(hijos.length>0){
+    var titulosHijos=hijos.slice(0,2).map(function(h){var t=h.titulo.length>55?h.titulo.substring(0,55)+"...":h.titulo;return"<em>"+esc(t)+"</em>";}).join(", ");
+    if(hijos.length>2)titulosHijos+=", <span style='color:var(--subtle);'>y "+(hijos.length-2)+" mas</span>";
+    html+="<div class='hilo-toggle' onclick='toggleHilo(\""+idStr+"\")'>"+(hiloAbierto?"&#9660;":"&#9654;")+" "+
+      "<span>"+hijos.length+" noticia"+(hijos.length>1?"s":"")+" en este hilo: "+titulosHijos+"</span>"+
+      "<span style='margin-left:auto;font-size:13px;color:#7C3AED;flex-shrink:0;padding-left:9px;'>"+(hiloAbierto?"Colapsar":"Expandir")+"</span></div>";
+    html+="<div class='hilo-expand"+(hiloAbierto?" open":"")+"'>";
+    hijos.forEach(function(hijo){html+=cardConHilo(hijo,nivel+1);});
+    html+="</div>";
+  }
+  return html;
+}
+
+function toggleHilo(id){HX[id]=!HX[id];render();}
+
+function ec(e){var m={"sindicatojob":"et-sindic","norma legal":"et-norma"};return m[String(e).toLowerCase()]||"et-custom";}
+function bldEtiq(n,idx){var tags=[];(n.etiquetas||[]).forEach(function(e){tags.push({l:e,c:ec(e)});});var ri=RI[n.riesgo];if(ri)tags.push({l:ri.label,c:ri.ec});return tags.map(function(t){return"<span class='etiq "+t.c+"' data-etqfil='"+esc(t.l)+"' data-idx='"+idx+"'>"+esc(t.l)+"</span>";}).join("");}
+function rbdg(r){var i=RI[r];if(!i)return"";return"<span class='badge "+i.cls+"'>FI-URP: "+i.label+"</span>";}
+function ebdg(est){if(est==="consulta")return"<span class='badge b-consulta'>En consulta publica</span>";if(est==="vigente")return"<span class='badge b-vigente'>Vigente</span>";if(est==="derogada")return"<span class='badge b-derogada'>Derogada</span>";return"";}
+
+function getFechaDisplay(n){
+  var fechaRaw=String(n.fecha||"");var fechaParte=fechaRaw.split(" ")[0];var horaFinal="";
+  if(n.hora&&String(n.hora).trim()!==""&&String(n.hora).trim()!=="00:00"){horaFinal=String(n.hora).trim();}
+  return esc(fechaParte||"Sin fecha")+(horaFinal?" "+esc(horaFinal):"");
+}
+
+function card(n,idx,nivel){
+  var id=String(n.id);
+  var rB=rbdg(n.riesgo),eB=ebdg(n.estado);
+  var n48=is48(n)&&!n.arch?"<span class='badge b-48h'>Últimas 48h</span>":"";
+  var dB=n.destacado&&nivel===0?"<span class='badge b-dest'>Destacado</span>":"";
+  var fB=n.rm?"<div><span class='norma-fuente' data-etqfil='"+esc(n.rm)+"' data-idx='"+idx+"'>"+esc(n.rm)+"</span></div>":"";
+  var aB=!n.arch?"<button class='ibt' data-act='archivar' data-idx='"+idx+"' data-nid='"+id+"'>&#128193;</button>":"<button class='ibt' data-act='restaurar' data-idx='"+idx+"' data-nid='"+id+"'>&#8617;</button>";
+  var sB="<button class='ibt ibt-star"+(n.destacado?" on":"")+"' data-act='togglestar' data-idx='"+idx+"' data-nid='"+id+"'>&#9733;</button>";
+  var isO=!!EX[id];
+  var nivelClass=nivel===0?"":(nivel===1?" indexada":(nivel===2?" indexada indexada-nivel-2":" indexada indexada-nivel-3"));
+  var archBadge=(n.archivos&&n.archivos.length)?"<span class='badge' style='background:#F0FDF4;color:#065F46;'>adj: "+n.archivos.length+"</span>":"";
+  var idxBadge=nivel>0?"<span class='badge b-hilo'>Indexada"+(nivel>1?" niv."+nivel:"")+"</span>":"";
+  var fechaDisplay=getFechaDisplay(n);
+  // ✅ Region y Actores como texto compacto en tarjeta colapsada
+  var extraParts=[];
+  if(n.region&&String(n.region).trim()!=='')extraParts.push("<span>Región: "+esc(n.region)+"</span>");
+  var focos=(n.riesgoDetalle&&n.riesgoDetalle.focos)||[];
+  if(focos.length)extraParts.push("<span>Actores: "+esc(focos.join(' / '))+"</span>");
+  var extraH=extraParts.length?"<div class='norma-extra'>"+extraParts.join("")+"</div>":"";
+  return "<div class='norma"+nivelClass+(n.arch?" arch":"")+(n.destacado&&nivel===0?" dest":"")+"' id='norma-card-"+id+"'>"+
+    "<div class='norma-topbar'><div class='norma-head-left'>"+
+    buildNormaIcon(n,nivel)+
+    "<div style='flex:1;min-width:0;'>"+
+    "<div class='norma-title'>"+esc(n.titulo)+"</div>"+
+    fB+
+    (n.desc?"<div class='norma-desc'>"+esc(n.desc)+"</div>":"")+
+    extraH+
+    "<div class='norma-badges'>"+n48+eB+rB+dB+archBadge+idxBadge+"</div>"+
+    "<div class='norma-tags'>"+bldEtiq(n,idx)+"</div></div></div>"+
+    "<div class='norma-actions'>"+
+    "<button class='ibt' data-act='toggle' data-nid='"+id+"' data-idx='"+idx+"'>"+(isO?"&#9650;":"&#9660;")+"</button>"+
+    sB+"<button class='ibt ibt-edit' data-act='editar' data-idx='"+idx+"' data-nid='"+id+"'>&#9998;</button>"+
+    aB+"<button class='ibt' data-act='eliminar' data-idx='"+idx+"' data-nid='"+id+"'>&#128465;</button></div></div>"+
+    "<div class='norma-meta'>"+
+    "<span class='norma-date'>"+fechaDisplay+"</span>"+
+    (n.url?"<a class='norma-link' href='"+esc(n.url)+"' target='_blank'>Ver publicacion</a>":"")+
+    (n.video?"<a class='norma-link' href='"+esc(n.video)+"' target='_blank' style='color:#E53E3E;'>&#9654; Ver video</a>":"")+
+    "<a class='wa-link' href='#' onclick='window.open(waUrl(NM["+idx+"]),\"_blank\");return false;'>Compartir por WhatsApp</a>"+
+    "</div>"+
+    "<div class='norma-detail"+(isO?" open":"")+"'>"+bldDetail(n)+"</div></div>";
+}
+
+function bldDetail(n){
+  var ri=RI[n.riesgo];
+  var ds=n.disposiciones||[];
+  var disps="";
+  if(ds.length){
+    disps+="<div class='disp-section-title'>Disposiciones principales</div>";
+    for(var i=0;i<ds.length;i++){disps+="<div class='disp'><div class='disp-n'>"+(i+1)+"</div><div><div class='disp-title'>"+esc(ds[i].t)+"</div><div class='disp-text'>"+esc(ds[i].d)+"</div></div></div>";}
+  }
+  // Region en detalle
+  var regionH="";
+  if(n.region&&String(n.region).trim()!==''){
+    regionH="<div style='padding:9px 13px;background:#E0F2FE;border-left:3px solid #0284c7;border-radius:0 8px 8px 0;font-size:15px;color:#0369A1;'><strong>Región:</strong> "+esc(n.region)+"</div>";
+  }
+  // Archivos con preview de imagen
+  var archH="";
+  var archs=n.archivos||[];
+  if(archs.length){
+    archH="<div class='arch-section'><div class='arch-section-title'>Archivos adjuntos ("+archs.length+")</div>";
+    archs.forEach(function(a){
+      var imgSrc=null;
+      if(esImagen(a.viewUrl))imgSrc=a.viewUrl;
+      else{var th=driveThumb(a.viewUrl);if(th)imgSrc=th;}
+      if(imgSrc){
+        archH+="<a href='"+esc(a.viewUrl)+"' target='_blank'><img class='arch-img-preview' src='"+esc(imgSrc)+"' alt='"+esc(a.nombre)+"' onerror='this.style.display=\"none\"'></a>";
+        archH+="<div class='arch-link-row'><div style='display:flex;align-items:center;gap:8px;'><span class='arch-link-icon'>&#128206;</span><span class='arch-link-name'>"+esc(a.nombre)+"</span></div><a class='arch-btn arch-btn-view' href='"+esc(a.viewUrl)+"' target='_blank' style='align-self:flex-start;'>Abrir</a></div>";
+      } else {
+        archH+="<div class='arch-link-row'><div style='display:flex;align-items:center;gap:8px;'><span class='arch-link-icon'>"+mimeIcon(a.viewUrl)+"</span><span class='arch-link-name'>"+esc(a.nombre)+"</span></div><a class='arch-btn arch-btn-view' href='"+esc(a.viewUrl)+"' target='_blank' style='align-self:flex-start;'>Abrir</a></div>";
+      }
+    });
+    archH+="</div>";
+  }
+  var padreH="";
+  if(n.padreId&&String(n.padreId).trim()!==''){
+    var padre=NM.find(function(x){return String(x.id)===String(n.padreId);});
+    if(padre){padreH="<div class='link-row' style='background:#F5F3FF;border-color:#DDD6FE;border-left-color:#8B5CF6;'>Indexada a: <strong style='color:#5B21B6;margin-left:7px;'>"+esc(padre.titulo)+"</strong></div>";}
+  }
+  var rd=n.riesgoDetalle||{};
+  var rH="<div class='oaipcs-label'>FI-URP - Riesgo Asociado</div>";
+  if(ri){
+    var fH="";var fs=rd.focos||[];
+    for(var j=0;j<fs.length;j++)fH+="<span class='hotspot'>"+esc(fs[j])+"</span>";
+    rH+="<div class='risk-row' style='background:"+ri.bgRow+";border-color:"+ri.bRow+";'><div class='pulse' style='background:"+ri.dot+";'></div><span style='font-size:17px;font-weight:700;color:"+ri.dot+";'>Nivel: "+ri.label+"</span></div>";
+    if(rd.conflicto)rH+="<div class='r-block r-red'><span class='r-title'>Descripcion del riesgo</span>"+esc(rd.conflicto)+"</div>";
+    if(fs.length)rH+="<div class='r-block r-red'><span class='r-title'>Actores</span><div style='margin-top:5px;'>"+fH+"</div></div>";
+    if(rd.acrecom)rH+="<div class='r-block r-amber'><span class='r-title'>Acción recomendada</span>"+esc(rd.acrecom)+"</div>";
+  } else {
+    if(rd.conflicto)rH+="<div class='r-block r-red'><span class='r-title'>Descripcion del riesgo</span>"+esc(rd.conflicto)+"</div>";
+    if(rd.focos&&rd.focos.length){var fH2="";for(var k=0;k<rd.focos.length;k++)fH2+="<span class='hotspot'>"+esc(rd.focos[k])+"</span>";rH+="<div class='r-block r-red'><span class='r-title'>Actores</span><div style='margin-top:5px;'>"+fH2+"</div></div>";}
+    if(rd.acrecom)rH+="<div class='r-block r-amber'><span class='r-title'>Acción recomendada</span>"+esc(rd.acrecom)+"</div>";
+    if(!rd.conflicto&&!(rd.focos&&rd.focos.length)&&!rd.acrecom)rH+="<div style='font-size:16px;color:var(--subtle);padding:8px;'>Sin análisis FI-URP registrado.</div>";
+  }
+  var tieneLeft = padreH||regionH||disps||archH;
+  var bodyStyle = tieneLeft ? "" : "grid-template-columns:1fr";
+  return "<div class='detail-body' style='"+bodyStyle+"'>"+(tieneLeft?"<div class='detail-left'>"+padreH+regionH+disps+archH+"</div>":"")+"<div class='detail-right'>"+rH+"</div></div>"+
+    "<div class='detail-footer'><span>Universidad Ricardo Palma - Facultad de Ingeniería</span><strong style='color:var(--primary);'>"+esc(n.rm||"")+"</strong></div>";
+}
+
+document.getElementById("filtros").onclick=function(ev){
+  var b=ev.target.closest("[data-fil]");if(!b)return;
+  FL=b.getAttribute("data-fil");
+  document.querySelectorAll(".fbtn").forEach(function(x){x.classList.remove("on");});
+  b.classList.add("on");render();
+};
+
+document.getElementById("lista").onclick=function(ev){
+  var b=ev.target.closest("[data-act]");
+  if(b){
+    var a=b.getAttribute("data-act"),idx=parseInt(b.getAttribute("data-idx")),id=b.getAttribute("data-nid");
+    if(a==="toggle"){EX[id]=!EX[id];render();}
+    else if(a==="editar"){abrirEditar(idx);}
+    else if(a==="archivar"){NM[idx].arch=true;updSheet(NM[idx],null);render();tst("Archivada");}
+    else if(a==="restaurar"){NM[idx].arch=false;updSheet(NM[idx],null);render();tst("Restaurada");}
+    else if(a==="togglestar"){NM[idx].destacado=!NM[idx].destacado;tst(NM[idx].destacado?"Destacada":"Quitada de destacados");updSheet(NM[idx],null);render();}
+    else if(a==="eliminar"){var nid=NM[idx].id;sfc("Eliminar esta alerta?",function(){NM.splice(idx,1);delSheet(nid);render();tst("Eliminada");});}
+    return;
+  }
+  var etqBtn=ev.target.closest("[data-etqfil]");
+  if(etqBtn){setEF(etqBtn.getAttribute("data-etqfil"));}
+};
+
+function normalizarRegistro(n){var fr=String(n.fecha||"");n.fecha=fr.split(" ")[0];return n;}
+
+function abrirNoticiaDesdeURL(){
+  var nid=null;
+  if(ABRIR_ID&&ABRIR_ID.trim()!=='')nid=ABRIR_ID.trim();
+  if(!nid){var mAbrir=window.location.search.match(/[?&]abrir=([^&]+)/);if(mAbrir)nid=mAbrir[1];}
+  if(!nid){var hash=window.location.hash;if(hash&&hash.indexOf('noticia-')===1)nid=hash.replace('#noticia-','');}
+  if(!nid)return;
+  var n=NM.find(function(x){return String(x.id)===String(nid);});
+  if(!n)return;
+  if(n.padreId&&String(n.padreId).trim()!=='')HX[String(n.padreId)]=true;
+  EX[String(nid)]=true;
+  render();
+  setTimeout(function(){
+    var el=document.getElementById('norma-card-'+nid);
+    if(el){
+      el.scrollIntoView({behavior:'smooth',block:'start'});
+      el.style.boxShadow='0 0 0 4px #002D54';
+      setTimeout(function(){el.style.boxShadow='';},2500);
+    }
+  },400);
+}
+
+function cargarNormas(){
+  document.getElementById("lista").innerHTML="<div class='empty'>Cargando...</div>";
+  var cb="_l"+Date.now();var ok=false;
+  window[cb]=function(res){
+    ok=true;
+    try{delete window[cb];}catch(e){}
+    if(Array.isArray(res)&&res.length>0){
+      NM=res.map(normalizarRegistro);render();tst(NM.length+" registros cargados");
+      abrirNoticiaDesdeURL();
+    } else {NM=[];render();}
+  };
+  var sc=document.createElement("script");
+  sc.onerror=function(){if(!ok){ok=true;NM=[];document.getElementById("lista").innerHTML="<div class='empty'>Error al conectar.</div>";}};
+  sc.src=SU+"?callback="+cb+"&nocache="+Math.random()+"&t="+Date.now();
+  document.head.appendChild(sc);
+  setTimeout(function(){if(!ok){ok=true;NM=[];document.getElementById("lista").innerHTML="<div class='empty'>Tiempo agotado.</div>";}},10000);
+}
+
+function comprimirNorma(n){
+  var c={id:n.id,titulo:n.titulo,rm:n.rm,estado:n.estado,riesgo:n.riesgo,fecha:n.fecha,arch:n.arch,destacado:n.destacado};
+  if(n.url)c.url=n.url;
+  if(n.video)c.video=n.video;
+  if(n.desc)c.desc=n.desc;
+  if(n.hora)c.hora=n.hora;
+  if(n.region)c.region=n.region;
+  if(n.padreId)c.padreId=n.padreId;
+  if(n.heroTitle)c.heroTitle=n.heroTitle;
+  if(n.heroSub)c.heroSub=n.heroSub;
+  if(n.archivos&&n.archivos.length)c.archivos=n.archivos.map(function(a){return{nombre:a.nombre,viewUrl:a.viewUrl};});
+  if(n.etiquetas&&n.etiquetas.length)c.etiquetas=n.etiquetas;
+  if(n.disposiciones&&n.disposiciones.length)c.disposiciones=n.disposiciones;
+  if(n.relacionadas&&n.relacionadas.length)c.relacionadas=n.relacionadas;
+  var rd=n.riesgoDetalle||{};
+  if(rd.conflicto||( rd.focos&&rd.focos.length)||rd.acrecom)c.riesgoDetalle=rd;
+  return c;
+}
+function saveSheet(n){var p=comprimirNorma(n);var cb="_s"+Date.now();var sc=document.createElement("script");window[cb]=function(r){try{delete window[cb];if(sc.parentNode)sc.parentNode.removeChild(sc);}catch(e){}tst(r&&r.ok?"Guardado":"Error al guardar");};sc.src=SU+"?callback="+cb+"&payload="+encodeURIComponent(JSON.stringify(p))+"&t="+Date.now();document.head.appendChild(sc);}
+function updSheet(n,riesgoAnterior){var p=comprimirNorma(n);var cb="_u"+Date.now();var sc=document.createElement("script");window[cb]=function(r){try{delete window[cb];if(sc.parentNode)sc.parentNode.removeChild(sc);}catch(e){}tst(r&&r.ok?"Actualizado":"Error al actualizar");};var raParam=riesgoAnterior?("&riesgoAnterior="+encodeURIComponent(riesgoAnterior)):"";sc.src=SU+"?callback="+cb+"&actualizar="+encodeURIComponent(JSON.stringify(p))+raParam+"&t="+Date.now();document.head.appendChild(sc);}
+function delSheet(id){var cb="_d"+Date.now();var sc=document.createElement("script");window[cb]=function(r){try{delete window[cb];if(sc.parentNode)sc.parentNode.removeChild(sc);}catch(e){}};sc.src=SU+"?eliminar="+String(id)+"&callback="+cb+"&t="+Date.now();document.head.appendChild(sc);}
+
+function limpErr(){["f-tit","f-fec","f-desc"].forEach(function(fid){document.getElementById(fid).classList.remove("error");});}
+function rndSugs(){var wrap=document.getElementById("etiq-sugs");if(!wrap)return;wrap.innerHTML="";var usadas=getEU();var act=FE.map(function(e){return e.toLowerCase();});usadas.filter(function(e){return act.indexOf(e.toLowerCase())===-1;}).slice(0,10).forEach(function(e){var btn=document.createElement("button");btn.className="etiq-sug";btn.type="button";btn.textContent=e;btn.onclick=function(){FE.push(e);rndFE();};wrap.appendChild(btn);});}
+function rndFE(){var wrap=document.getElementById("etiq-form-wrap");wrap.innerHTML="";for(var i=0;i<FE.length;i++){(function(idx,val){var sp=document.createElement("span");sp.className="etiq-form-item";sp.textContent=val+" ";var btn=document.createElement("button");btn.type="button";btn.style.cssText="background:none;border:none;cursor:pointer;color:#1D4ED8;font-size:14px;padding:0;";btn.textContent="x";btn.onclick=function(){FE.splice(idx,1);rndFE();};sp.appendChild(btn);wrap.appendChild(sp);})(i,FE[i]);}var inp=document.createElement("input");inp.type="text";inp.className="etiq-form-input";inp.placeholder=FE.length?"Agregar etiqueta...":"Escribe y presiona Enter";inp.onkeydown=function(ev){if(ev.key==="Enter"||ev.key===","){ev.preventDefault();var val=this.value.trim();if(val){FE.push(val);this.value="";rndFE();}}};wrap.appendChild(inp);rndSugs();}
+function rndFocos(){var wrap=document.getElementById("focos-wrap");wrap.innerHTML="";for(var i=0;i<FC.length;i++){(function(idx,val){var sp=document.createElement("span");sp.className="tag-item";sp.textContent=val+" ";var btn=document.createElement("button");btn.type="button";btn.style.cssText="background:none;border:none;cursor:pointer;color:var(--accent-text);font-size:14px;padding:0;";btn.textContent="x";btn.onclick=function(){FC.splice(idx,1);rndFocos();};sp.appendChild(btn);wrap.appendChild(sp);})(i,FC[i]);}var inp=document.createElement("input");inp.type="text";inp.className="tag-input";inp.placeholder=FC.length?"Agregar actor...":"Escribe y presiona Enter";inp.onkeydown=function(ev){if(ev.key==="Enter"||ev.key===","){ev.preventDefault();var val=this.value.trim();if(val){FC.push(val);rndFocos();}}};wrap.appendChild(inp);}
+function onRC(){var v=document.getElementById("f-riesgo").value;var box=document.getElementById("riesgo-desc-box");var inf=RI[v];if(inf){box.className="riesgo-desc visible "+inf.rcls;box.textContent=inf.def;}else{box.className="riesgo-desc";box.textContent="";}}
+
+function abrirModal(){
+  EID=null;EFO=null;RIESGO_ORIGINAL=null;FC=[];FE=[];FA=[];PADRE_ID=null;
+  document.getElementById("modalTitle").textContent="Registrar nueva noticia o norma";
+  document.getElementById("modalSub").innerHTML="Complete los campos obligatorios (<span style='color:var(--accent)'>*</span>).";
+  document.getElementById("btnGuardar").style.display="";
+  document.getElementById("btnActualizar").style.display="none";
+  document.getElementById("f-fec").value=new Date().toISOString().split("T")[0];
+  document.getElementById("f-hora").value="";
+  document.getElementById("f-region").value="";
+  document.getElementById("disps-list").innerHTML="";
+  document.getElementById("riesgo-desc-box").className="riesgo-desc";
+  document.getElementById("riesgo-desc-box").textContent="";
+  document.getElementById("idx-buscar").value="";
+  document.getElementById("idx-resultados").classList.remove("open");
+  document.getElementById("idx-seleccionado-wrap").innerHTML="";
+  document.getElementById("linksPreviewList").innerHTML="";
+  document.getElementById("f-link-url").value="";
+  document.getElementById("f-link-nombre").value="";
+  ["f-tit","f-rm","f-desc","f-conflicto","f-acrecom","f-url","f-video"].forEach(function(fid){document.getElementById(fid).value="";});
+  document.getElementById("f-riesgo").value="ninguno";
+  document.getElementById("f-est").value="";
+  limpErr();rndFocos();rndFE();
+  document.getElementById("modal").classList.add("open");
+}
+
+function abrirEditar(idx){
+  var n=NM[idx];if(!n)return;
+  EID=n.id;EFO=n.fecha;RIESGO_ORIGINAL=n.riesgo||"ninguno";
+  FC=(n.riesgoDetalle&&n.riesgoDetalle.focos)||[];
+  FE=(n.etiquetas||[]).slice();
+  FA=(n.archivos||[]).slice();
+  PADRE_ID=n.padreId||null;
+  document.getElementById("modalTitle").textContent="Editar alerta normativa";
+  document.getElementById("modalSub").innerHTML="Modifica los campos y guarda los cambios.";
+  document.getElementById("btnGuardar").style.display="none";
+  document.getElementById("btnActualizar").style.display="";
+  document.getElementById("f-tit").value=n.titulo||"";
+  document.getElementById("f-rm").value=n.rm||"";
+  document.getElementById("f-est").value=n.estado||"";
+  document.getElementById("f-region").value=n.region||"";
+  var fv="";
+  try{var pp=String(n.fecha).split(" ")[0].split("/");if(pp.length===3){fv=pp[2]+"-"+String(pp[1]).padStart(2,"0")+"-"+String(pp[0]).padStart(2,"0");}else{fv=String(n.fecha).substring(0,10);}}catch(ex){fv="";}
+  document.getElementById("f-fec").value=fv;
+  document.getElementById("f-hora").value=n.hora||"";
+  document.getElementById("f-url").value=n.url||"";
+  document.getElementById("f-video").value=n.video||"";
+  document.getElementById("f-desc").value=n.desc||"";
+  document.getElementById("f-riesgo").value=n.riesgo||"ninguno";
+  document.getElementById("f-conflicto").value=(n.riesgoDetalle&&n.riesgoDetalle.conflicto)||"";
+  document.getElementById("f-acrecom").value=(n.riesgoDetalle&&n.riesgoDetalle.acrecom)||"";
+  document.getElementById("idx-buscar").value="";
+  document.getElementById("idx-resultados").classList.remove("open");
+  document.getElementById("f-link-url").value="";
+  document.getElementById("f-link-nombre").value="";
+  document.getElementById("disps-list").innerHTML="";
+  var ds=n.disposiciones||[];
+  for(var i=0;i<ds.length;i++){addDV(ds[i].t,ds[i].d);}
+  limpErr();onRC();rndFocos();rndFE();rndLinksPreview();rndIdxSeleccionado();
+  document.getElementById("modal").classList.add("open");
+}
+
+function cerrarModal(){document.getElementById("modal").classList.remove("open");EID=null;EFO=null;RIESGO_ORIGINAL=null;PADRE_ID=null;}
+function addDV(tit,dsc){var num=document.getElementById("disps-list").children.length+1;var li=document.createElement("div");li.className="disp-item-form";li.innerHTML="<div class='disp-num-form'>"+num+"</div><div class='disp-fields'><input type='text' placeholder='Titulo' class='d-title' value='"+esc(tit)+"'><textarea class='d-text' placeholder='Descripcion...'>"+esc(dsc)+"</textarea></div><button type='button' class='btn-del-disp'>x</button>";li.querySelector(".btn-del-disp").onclick=function(){li.remove();var it=document.querySelectorAll("#disps-list .disp-num-form");for(var i=0;i<it.length;i++)it[i].textContent=i+1;};document.getElementById("disps-list").appendChild(li);}
+function addDisp(){var num=document.getElementById("disps-list").children.length+1;var li=document.createElement("div");li.className="disp-item-form";li.innerHTML="<div class='disp-num-form'>"+num+"</div><div class='disp-fields'><input type='text' placeholder='Titulo' class='d-title'><textarea class='d-text' placeholder='Descripcion...'></textarea></div><button type='button' class='btn-del-disp'>x</button>";li.querySelector(".btn-del-disp").onclick=function(){li.remove();var it=document.querySelectorAll("#disps-list .disp-num-form");for(var i=0;i<it.length;i++)it[i].textContent=i+1;};document.getElementById("disps-list").appendChild(li);}
+function recoger(){
+  var t=document.getElementById("f-tit").value.trim();var r=document.getElementById("f-rm").value.trim();
+  var est=document.getElementById("f-est").value;
+  var fec=document.getElementById("f-fec").value;var hora=document.getElementById("f-hora").value;
+  var region=document.getElementById("f-region").value.trim();
+  var dsc=document.getElementById("f-desc").value.trim();
+  var di=[];var its=document.querySelectorAll("#disps-list .disp-item-form");
+  for(var i=0;i<its.length;i++){var tt=its[i].querySelector(".d-title").value.trim();var dd=its[i].querySelector(".d-text").value.trim();if(tt||dd)di.push({t:tt,d:dd});}
+  return{t:t,r:r,est:est,fec:fec,hora:hora,region:region,dsc:dsc,di:di};
+}
+function validar(d){limpErr();var err=[];if(!d.t){document.getElementById("f-tit").classList.add("error");err.push("titulo");}if(!d.fec){document.getElementById("f-fec").classList.add("error");err.push("fecha");}if(!d.dsc){document.getElementById("f-desc").classList.add("error");err.push("descripcion");}if(err.length>0){tst("Completa: "+err.join(", "));return false;}return true;}
+
+function guardar(){
+  var d=recoger();if(!validar(d))return;
+  var pf2=d.fec.split("-");var fs=parseInt(pf2[2])+"/"+parseInt(pf2[1])+"/"+pf2[0];
+  var n={id:'N'+Date.now(),titulo:d.t,rm:d.r,estado:d.est,
+    riesgo:document.getElementById("f-riesgo").value,desc:d.dsc,
+    url:document.getElementById("f-url").value.trim(),video:document.getElementById("f-video").value.trim(),fecha:fs,hora:d.hora||"",
+    region:d.region||"",
+    arch:false,destacado:false,heroTitle:d.t,heroSub:'',
+    etiquetas:FE.slice(),disposiciones:d.di,relacionadas:[],
+    archivos:FA.slice(),padreId:PADRE_ID||'',
+    riesgoDetalle:{conflicto:document.getElementById("f-conflicto").value.trim(),focos:FC.slice(),acrecom:document.getElementById("f-acrecom").value.trim()}};
+  NM.unshift(n);
+  if(PADRE_ID)HX[String(PADRE_ID)]=true;
+  saveSheet(n);cerrarModal();render();tst("Guardado");
+}
+
+function actualizar(){
+  var d=recoger();if(!validar(d))return;
+  var riesgoNuevo=document.getElementById("f-riesgo").value;
+  for(var i=0;i<NM.length;i++){
+    if(String(NM[i].id)===String(EID)){
+      NM[i].titulo=d.t;NM[i].rm=d.r;NM[i].estado=d.est;
+      NM[i].fecha=String(EFO).split(' ')[0];NM[i].hora=d.hora||'';
+      NM[i].region=d.region||'';
+      NM[i].url=document.getElementById("f-url").value.trim();NM[i].video=document.getElementById("f-video").value.trim();NM[i].desc=d.dsc;
+      NM[i].riesgo=riesgoNuevo;NM[i].heroTitle=d.t;
+      NM[i].etiquetas=FE.slice();NM[i].disposiciones=d.di;NM[i].archivos=FA.slice();
+      NM[i].padreId=PADRE_ID||'';
+      NM[i].riesgoDetalle={conflicto:document.getElementById("f-conflicto").value.trim(),focos:FC.slice(),acrecom:document.getElementById("f-acrecom").value.trim()};
+      updSheet(JSON.parse(JSON.stringify(NM[i])),RIESGO_ORIGINAL);break;
+    }
+  }
+  cerrarModal();render();tst("Cambios guardados");
+}
+
+document.getElementById("btnAgregar").onclick=abrirModal;
+document.getElementById("btnCancelar").onclick=cerrarModal;
+document.getElementById("btnGuardar").onclick=guardar;
+document.getElementById("btnActualizar").onclick=actualizar;
+document.getElementById("btnAddDisp").onclick=addDisp;
+document.getElementById("f-riesgo").onchange=onRC;
+document.getElementById("modal").onclick=function(ev){if(ev.target===this)cerrarModal();};
+window.onload=function(){
+  cargarNormas();
+  initRegionAutocomplete();
+  document.getElementById("btnEtiqMgr").onclick=function(){
+    document.getElementById("etiqMgrPanel").classList.toggle("open");
+    rndEtiqMgr();
+  };
+  document.getElementById("etiqMgrAdd").onclick=function(){
+    var v=document.getElementById("etiqMgrInput").value.trim();
+    if(!v){tst("Escribe un nombre de etiqueta");return;}
+    var eu=getEU();
+    if(eu.map(function(e){return e.toLowerCase();}).indexOf(v.toLowerCase())>-1){tst("Ya existe esa etiqueta");return;}
+    if(ETIQ_EXTRA.map(function(e){return e.toLowerCase();}).indexOf(v.toLowerCase())>-1){tst("Ya existe esa etiqueta");return;}
+    ETIQ_EXTRA.push(v);
+    tst("Etiqueta \""+v+"\" creada");
+    document.getElementById("etiqMgrInput").value="";
+    rndEtiqMgr();
+  };
+  document.getElementById("etiqMgrInput").onkeydown=function(e){
+    if(e.key==="Enter")document.getElementById("etiqMgrAdd").click();
+  };
+};
+</script>
+</body>
+</html>
