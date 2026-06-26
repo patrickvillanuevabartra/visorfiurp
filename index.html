@@ -165,6 +165,13 @@ body{background:#CBD5E1;padding:24px 16px;font-family:"IBM Plex Sans",sans-serif
 .com-cancel{background:none;border:none;color:var(--subtle);font-size:14px;cursor:pointer;font-weight:600;}
 .com-empty{font-size:14px;color:var(--subtle);padding:6px 0;font-style:italic;}
 .com-count-card{display:inline-flex;align-items:center;gap:4px;font-size:13px;color:#7C3AED;font-weight:600;}
+.like-btn{display:inline-flex;align-items:center;gap:5px;background:none;border:1px solid var(--border);border-radius:20px;padding:4px 13px;font-size:13px;font-weight:600;color:var(--muted);cursor:pointer;font-family:inherit;transition:all 0.15s;}
+.like-btn:hover{background:var(--blue-light);border-color:#BAE6FD;color:var(--blue);}
+.like-btn.liked{background:#EFF6FF;border-color:#BAE6FD;color:var(--blue);}
+.like-btn .like-ico{font-size:14px;}
+.com-like-btn{display:inline-flex;align-items:center;gap:4px;background:none;border:none;padding:0;font-size:13px;font-weight:600;color:#7C3AED;cursor:pointer;font-family:inherit;}
+.com-like-btn:hover{text-decoration:underline;}
+.com-like-btn.liked{color:var(--blue);}
 .arch-section{margin-top:7px;}
 .arch-section-title{font-size:13px;font-weight:700;color:var(--subtle);text-transform:uppercase;letter-spacing:0.8px;margin-bottom:9px;}
 .arch-link-row{display:flex;flex-direction:column;gap:6px;padding:10px 13px;background:var(--surface);border-radius:8px;border:1px solid var(--border);margin-bottom:7px;}
@@ -816,6 +823,7 @@ function card(n,idx,nivel){
     (n.video?"<a class='norma-link' href='"+esc(n.video)+"' target='_blank' style='color:#E53E3E;'>&#9654; Ver video</a>":"")+
     "<a class='wa-link' href='#' onclick='window.open(waUrl(NM["+idx+"]),\"_blank\");return false;'>Compartir por WhatsApp</a>"+
     "<a class='com-count-card' href='#' onclick='abrirYComentar(\""+id+"\");return false;' title='Ver comentarios'>&#128172; "+(COM_CONTEOS[id]||0)+" comentario"+((COM_CONTEOS[id]||0)===1?"":"s")+"</a>"+
+    "<button class='like-btn"+(yaDioLike("norma",id)?" liked":"")+"' onclick='darLikeNorma(\""+id+"\",this)' title='Me gusta'><span class='like-ico'>&#128077;</span> <span class='like-num'>"+(n.likes||0)+"</span></button>"+
     "</div>"+
     "<div class='norma-detail"+(isO?" open":"")+"'>"+bldDetail(n)+"</div></div>";
 }
@@ -990,6 +998,46 @@ function cargarConteosComentarios(){
   document.head.appendChild(sc);
 }
 
+// ===== LIKES (1 por navegador, recordado en localStorage) =====
+function yaDioLike(tipo,id){
+  try{ return localStorage.getItem("like_"+tipo+"_"+id)==="1"; }catch(e){ return false; }
+}
+function marcarLike(tipo,id){
+  try{ localStorage.setItem("like_"+tipo+"_"+id,"1"); }catch(e){}
+}
+
+function darLikeNorma(normaId,btn){
+  if(yaDioLike("norma",normaId)){tst("Ya diste tu like");return;}
+  marcarLike("norma",normaId);
+  // Optimista: subir el número al instante
+  var n=NM.find(function(x){return String(x.id)===String(normaId);});
+  if(n){n.likes=(n.likes||0)+1;}
+  if(btn){btn.classList.add("liked");var c=btn.querySelector(".like-num");if(c)c.textContent=(n?n.likes:1);}
+  var cb="_lkn"+Date.now();
+  window[cb]=function(r){try{delete window[cb];}catch(e){}
+    if(r&&r.ok&&n){n.likes=r.likes;if(btn){var c2=btn.querySelector(".like-num");if(c2)c2.textContent=r.likes;}}
+  };
+  var sc=document.createElement("script");
+  sc.src=SU+"?like_norma="+encodeURIComponent(normaId)+"&callback="+cb+"&t="+Date.now();
+  document.head.appendChild(sc);
+}
+
+function darLikeComentarioFront(comId,normaId,btn){
+  if(yaDioLike("com",comId)){tst("Ya diste tu like");return;}
+  marcarLike("com",comId);
+  var arr=COM_CACHE[normaId]||[];
+  var c=arr.find(function(x){return String(x.id)===String(comId);});
+  if(c){c.likes=(c.likes||0)+1;}
+  if(btn){btn.classList.add("liked");var nn=btn.querySelector(".clike-num");if(nn)nn.textContent=(c?c.likes:1);}
+  var cb="_lkc"+Date.now();
+  window[cb]=function(r){try{delete window[cb];}catch(e){}
+    if(r&&r.ok&&c){c.likes=r.likes;if(btn){var n2=btn.querySelector(".clike-num");if(n2)n2.textContent=r.likes;}}
+  };
+  var sc=document.createElement("script");
+  sc.src=SU+"?like_comentario="+encodeURIComponent(comId)+"&callback="+cb+"&t="+Date.now();
+  document.head.appendChild(sc);
+}
+
 // Abre la noticia (si no está abierta) y carga/enfoca sus comentarios.
 function abrirYComentar(normaId){
   if(!EX[normaId])EX[normaId]=true;
@@ -1040,6 +1088,7 @@ function pintarComentarios(normaId){
       "<div class='com-top'><span class='com-author'>"+esc(c.autor||"Anónimo")+"</span><span class='com-date'>"+esc(c.fecha||"")+"</span></div>"+
       "<div class='com-text'>"+esc(c.texto||"")+"</div>"+
       "<div class='com-actions'>"+
+        "<button class='com-like-btn"+(yaDioLike("com",c.id)?" liked":"")+"' onclick='darLikeComentarioFront(\""+esc(c.id)+"\",\""+esc(normaId)+"\",this)'>&#128077; <span class='clike-num'>"+(c.likes||0)+"</span></button>"+
         (nivel<2?"<button class='com-act-btn' onclick='mostrarFormResp(\""+esc(normaId)+"\",\""+esc(c.id)+"\")'>Responder</button>":"")+
         "<button class='com-act-btn del' onclick='borrarComentario(\""+esc(normaId)+"\",\""+esc(c.id)+"\")'>Eliminar</button>"+
       "</div>"+
