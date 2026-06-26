@@ -178,6 +178,10 @@ body{background:#CBD5E1;padding:24px 16px;font-family:"IBM Plex Sans",sans-serif
 .arch-link-icon{font-size:22px;flex-shrink:0;}
 .arch-link-name{font-size:15px;font-weight:600;color:var(--text);word-break:break-word;}
 .arch-img-preview{width:100%;max-height:160px;object-fit:cover;border-radius:8px;margin-bottom:7px;cursor:pointer;}
+.arch-img-full{width:100%;max-width:520px;height:auto;border-radius:10px;margin-bottom:8px;cursor:zoom-in;display:block;border:1px solid var(--border);}
+.img-zoom-overlay{position:fixed;inset:0;background:rgba(0,0,0,0.9);display:none;align-items:center;justify-content:center;z-index:500;padding:20px;cursor:zoom-out;}
+.img-zoom-overlay.open{display:flex;}
+.img-zoom-overlay img{max-width:95vw;max-height:95vh;object-fit:contain;border-radius:6px;}
 .arch-btn{display:inline-flex;align-items:center;gap:6px;padding:8px 13px;border-radius:7px;font-size:14px;font-weight:600;text-decoration:none;}
 .arch-btn-view{background:var(--blue-light);color:var(--blue);border:1px solid #BAE6FD;}
 .link-input-wrap{display:flex;gap:9px;margin-bottom:9px;flex-wrap:wrap;}
@@ -457,7 +461,7 @@ function buildNormaIcon(n, nivel){
   var archs=n.archivos||[];
   for(var i=0;i<archs.length;i++){
     var u=archs[i].viewUrl||'';
-    if(u.match(/\.(jpg|jpeg|png|gif|webp)(\?|$)/i)){
+    if(esImagen(u)){
       return "<div class='norma-icon"+sm+"'><img src='"+esc(u)+"' alt='' onerror='this.parentNode.innerHTML=\"&#128220;\"'></div>";
     }
     var th=driveThumb(u);
@@ -477,7 +481,27 @@ function buildNormaIcon(n, nivel){
 }
 
 function mimeIcon(url){return"&#128206;";}
-function esImagen(url){return !!(url&&url.match(/\.(jpg|jpeg|png|gif|webp)(\?|$)/i));}
+function esImagen(url){
+  if(!url)return false;
+  if(url.match(/\.(jpg|jpeg|png|gif|webp)(\?|$)/i))return true;
+  // Servicios de imagen con enlace directo
+  if(url.match(/i\.ibb\.co|i\.postimg\.cc|imgur\.com\/[a-zA-Z0-9]+\.(jpg|png|jpeg|gif|webp)/i))return true;
+  return false;
+}
+// Abre una imagen a pantalla completa.
+function ampliarImagen(url){
+  var ov=document.getElementById("imgZoomOverlay");
+  if(!ov){
+    ov=document.createElement("div");
+    ov.id="imgZoomOverlay";
+    ov.className="img-zoom-overlay";
+    ov.onclick=function(){ov.classList.remove("open");};
+    ov.innerHTML="<img alt=''>";
+    document.body.appendChild(ov);
+  }
+  ov.querySelector("img").src=url;
+  ov.classList.add("open");
+}
 
 function getHijos(padreId){return srtAsc(NM.filter(function(n){return String(n.padreId)===String(padreId)&&!n.arch;}));}
 function esRaiz(n){return !n.padreId||String(n.padreId).trim()==='';}
@@ -847,14 +871,19 @@ function bldDetail(n){
   if(archs.length){
     archH="<div class='arch-section'><div class='arch-section-title'>Archivos adjuntos ("+archs.length+")</div>";
     archs.forEach(function(a){
-      var imgSrc=null;
-      if(esImagen(a.viewUrl))imgSrc=a.viewUrl;
-      else{var th=driveThumb(a.viewUrl);if(th)imgSrc=th;}
-      if(imgSrc){
-        archH+="<a href='"+esc(a.viewUrl)+"' target='_blank'><img class='arch-img-preview' src='"+esc(imgSrc)+"' alt='"+esc(a.nombre)+"' onerror='this.style.display=\"none\"'></a>";
-        archH+="<div class='arch-link-row'><div style='display:flex;align-items:center;gap:8px;'><span class='arch-link-icon'>&#128206;</span><span class='arch-link-name'>"+esc(a.nombre)+"</span></div><a class='arch-btn arch-btn-view' href='"+esc(a.viewUrl)+"' target='_blank' style='align-self:flex-start;'>Abrir</a></div>";
+      if(esImagen(a.viewUrl)){
+        // Imagen con enlace directo (ImgBB, PostImages, etc.): grande y completa
+        archH+="<img class='arch-img-full' src='"+esc(a.viewUrl)+"' alt='"+esc(a.nombre)+"' onclick='ampliarImagen(\""+esc(a.viewUrl)+"\")' onerror='this.style.display=\"none\";this.nextSibling&&(this.nextSibling.style.display=\"flex\");'>";
+        archH+="<div class='arch-link-row' style='display:none;'><div style='display:flex;align-items:center;gap:8px;'><span class='arch-link-icon'>&#128206;</span><span class='arch-link-name'>"+esc(a.nombre)+"</span></div><a class='arch-btn arch-btn-view' href='"+esc(a.viewUrl)+"' target='_blank' style='align-self:flex-start;'>Abrir</a></div>";
       } else {
-        archH+="<div class='arch-link-row'><div style='display:flex;align-items:center;gap:8px;'><span class='arch-link-icon'>"+mimeIcon(a.viewUrl)+"</span><span class='arch-link-name'>"+esc(a.nombre)+"</span></div><a class='arch-btn arch-btn-view' href='"+esc(a.viewUrl)+"' target='_blank' style='align-self:flex-start;'>Abrir</a></div>";
+        var th=driveThumb(a.viewUrl);
+        if(th){
+          // Imagen de Google Drive: solo miniatura (Drive no permite verla completa)
+          archH+="<a href='"+esc(a.viewUrl)+"' target='_blank'><img class='arch-img-preview' src='"+esc(th)+"' alt='"+esc(a.nombre)+"' onerror='this.style.display=\"none\"'></a>";
+          archH+="<div class='arch-link-row'><div style='display:flex;align-items:center;gap:8px;'><span class='arch-link-icon'>&#128206;</span><span class='arch-link-name'>"+esc(a.nombre)+"</span></div><a class='arch-btn arch-btn-view' href='"+esc(a.viewUrl)+"' target='_blank' style='align-self:flex-start;'>Abrir</a></div>";
+        } else {
+          archH+="<div class='arch-link-row'><div style='display:flex;align-items:center;gap:8px;'><span class='arch-link-icon'>"+mimeIcon(a.viewUrl)+"</span><span class='arch-link-name'>"+esc(a.nombre)+"</span></div><a class='arch-btn arch-btn-view' href='"+esc(a.viewUrl)+"' target='_blank' style='align-self:flex-start;'>Abrir</a></div>";
+        }
       }
     });
     archH+="</div>";
