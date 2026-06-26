@@ -138,6 +138,9 @@ function doGet(e) {
   if (params.com_listar) {                  // listar comentarios de una norma
     return jsonp(cb, obtenerComentarios(String(params.com_listar)));
   }
+  if (params.com_conteos) {                 // conteo de comentarios por cada norma
+    return jsonp(cb, contarComentariosPorNorma());
+  }
   if (params.com_guardar) {
     return jsonp(cb, withLock(function(){
       var com = JSON.parse(decodeURIComponent(params.com_guardar));
@@ -582,6 +585,29 @@ function quintaRecordToComentario(rec) {
     fecha:    g('fecha'),            // viene ya como d/m/Y H:M
     aprobado: (g('aprobado') === 'TRUE' || g('aprobado') === true)
   };
+}
+
+// Devuelve un objeto { norma_id: cantidad } con el conteo de comentarios aprobados.
+function contarComentariosPorNorma() {
+  var conteos = {};
+  var page = 1;
+  while (page <= 100) {
+    var url = QUINTA_BASE + '/apps/' + APP_ID + '/dtypes/entity/' + ENTITY_COM
+            + '.json?rest_api_key=' + encodeURIComponent(getApiKey()) + '&page=' + page;
+    var resp = UrlFetchApp.fetch(url, {method:'get', muteHttpExceptions:true});
+    if (resp.getResponseCode() !== 200) break;
+    var data; try { data = JSON.parse(resp.getContentText()); } catch(ex){ break; }
+    if (!data.records || !data.records.length) break;
+    for (var i=0;i<data.records.length;i++) {
+      var c = quintaRecordToComentario(data.records[i]);
+      if (c.aprobado && c.norma_id) {
+        conteos[c.norma_id] = (conteos[c.norma_id] || 0) + 1;
+      }
+    }
+    if (data.records.length < 20) break;
+    page++;
+  }
+  return conteos;
 }
 
 // Lista todos los comentarios APROBADOS de una norma dada.
