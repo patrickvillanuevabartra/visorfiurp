@@ -32,6 +32,7 @@
 var QUINTA_BASE = 'https://quintadb.com';
 var APP_ID      = 'bxW5nYl8nlkOokW4JcMfb2';
 var ENTITY_ID   = 'dcTSkFW5jdLPVdQSo-WQT8';   // tabla "Alertas" (URP)
+var ENTITY_COM  = 'dcOabkW4LcTykaW77dJ8kb';   // tabla "Comentarios" (URP)
 
 // Carpeta de Drive donde se guardan los adjuntos (la misma del original).
 var DRIVE_FOLDER_ID = '1rYHfTiHCKmY-zHRQK6sWSop1RvX75J4d';
@@ -71,6 +72,17 @@ var F = {
 };
 // Mapa inverso field_id -> nombre, para leer las respuestas de QuintaDB.
 var F_INV = (function(){ var o={}; for (var k in F) o[F[k]] = k; return o; })();
+
+// ====== MAPEO de campos de la tabla Comentarios =============================
+var FC = {
+  id:       'ddUv_dJCnbiOb6WPz2zxPU',
+  norma_id: 'cNfCkrumnfWPpdLmoaCh5x',
+  padre_id: 'clEmoetM1mW4lcUqKzWRfs',
+  autor:    'dcSge5b8jdD4kLWOtcKXGK',
+  texto:    'a-W7lcPvXdKApdNmkQDSkg',
+  fecha:    'buWOOhW6PdOykpW4BdPqqK',   // tipo "Fecha y hora", devuelve d/m/Y H:M
+  aprobado: 'b9mmkjW71pW5dcHCoLwSk5'
+};
 
 // ====== CONVERSIÓN DE FECHA ==================================================
 // NOTA: esta instancia de QuintaDB almacena y devuelve la fecha en formato
@@ -122,7 +134,21 @@ function doGet(e) {
       return guardarNorma(norma);
     }));
   }
-  if (params.callback) {                    // listar todas
+  // ---- COMENTARIOS ----
+  if (params.com_listar) {                  // listar comentarios de una norma
+    return jsonp(cb, obtenerComentarios(String(params.com_listar)));
+  }
+  if (params.com_guardar) {
+    return jsonp(cb, withLock(function(){
+      var com = JSON.parse(decodeURIComponent(params.com_guardar));
+      return guardarComentario(com);
+    }));
+  }
+  if (params.com_eliminar) {
+    return jsonp(cb, withLock(function(){ return eliminarComentario(String(params.com_eliminar)); }));
+  }
+
+  if (params.callback) {                    // listar todas las normas
     return jsonp(cb, obtenerNormas());
   }
 
@@ -530,6 +556,131 @@ function renderNoticia(id) {
   return HtmlService.createHtmlOutput(html).setTitle(titulo).setXFrameOptionsMode(HtmlService.XFrameOptionsMode.ALLOWALL);
 }
 
+// ====== COMENTARIOS =========================================================
+// Convierte un record de QuintaDB (tabla Comentarios) al objeto del front.
+function quintaRecordToComentario(rec) {
+  var v = (rec.values && !Array.isArray(rec.values)) ? rec.values : {};
+  function g(name){ var fid = FC[name]; return v[fid] !== undefined ? v[fid] : ''; }
+  return {
+    quinta_record_id: rec.id || '',
+    id:       String(g('id')),
+    norma_id: String(g('norma_id')),
+    padre_id: String(g('padre_id')),
+    autor:    g('autor'),
+    texto:    g('texto'),
+    fecha:    g('fecha'),            // viene ya como d/m/Y H:M
+    aprobado: (g('aprobado') === 'TRUE' || g('aprobado') === true)
+  };
+}
+
+// Lista todos los comentarios APROBADOS de una norma dada.
+function obtenerComentarios(normaId) {
+  var todos = [];
+  var page = 1;
+  while (page <= 100) {
+    var url = QUINTA_BASE + '/apps/' + APP_ID + '/dtypes/entity/' + ENTITY_COM
+            + '.json?rest_api_key=' + encodeURIComponent(getApiKey()) + '&page=' + page;
+    var resp = UrlFetchApp.fetch(url, {method:'get', muteHttpExceptions:true});
+    if (resp.getResponseCode() !== 200) break;
+    var data; try { data = JSON.parse(resp.getContentText()); } catch(ex){ break; }
+    if (!data.records || !data.records.length) break;
+    for (var i=0;i<data.records.length;i++) {
+      var c = quintaRecordToComentario(data.records[i]);
+      if (String(c.norma_id) === String(normaId) && c.aprobado) todos.push(c);
+    }
+    if (data.records.length < 20) break;
+    page++;
+  }
+  // Orden cronológico ascendente por id (que es timestamp).
+  todos.sort(function(a,b){ return String(a.id).localeCompare(String(b.id)); });
+  return todos;
+}
+
+function buildComFormPayload(com) {
+  var vals = {};
+  vals[FC.id]       = String(com.id || ('CM' + Date.now()));
+  vals[FC.norma_id] = String(com.norma_id || '');
+  vals[FC.padre_id] = String(com.padre_id || '');
+  vals[FC.autor]    = (com.autor || 'Anónimo').substring(0, 80);
+  vals[FC.texto]    = (com.texto || '').substring(0, 2000);
+  vals[FC.fecha]    = com.fecha || nowFechaHora();
+  vals[FC.aprobado] = 'TRUE';   // publicación directa (moderación posterior)
+  var parts = ['rest_api_key=' + encodeURIComponent(getApiKey())];
+  for (var fid in vals) parts.push('values[' + encodeURIComponent(fid) + ']=' + encodeURIComponent(vals[fid]));
+  return parts.join('&');
+}
+
+function guardarComentario(com) {
+  if (!com.texto || !com.texto.trim()) return {ok:false, error:'comentario vacío'};
+  if (!com.norma_id) return {ok:false, error:'falta norma_id'};
+  var url = QUINTA_BASE + '/apps/' + APP_ID + '/dtypes/entity/' + ENTITY_COM + '.json';
+  var resp = UrlFetchApp.fetch(url, {
+    method:'post',
+    contentType:'application/x-www-form-urlencoded',
+    payload: buildComFormPayload(com),
+    muteHttpExceptions:true
+  });
+  var code = resp.getResponseCode();
+  return (code >= 200 && code < 300) ? {ok:true} : {ok:false, error:resp.getContentText()};
+}
+
+function buscarComRecordId(idCom) {
+  var page = 1;
+  while (page <= 100) {
+    var url = QUINTA_BASE + '/apps/' + APP_ID + '/dtypes/entity/' + ENTITY_COM
+            + '.json?rest_api_key=' + encodeURIComponent(getApiKey()) + '&page=' + page;
+    var resp = UrlFetchApp.fetch(url, {method:'get', muteHttpExceptions:true});
+    if (resp.getResponseCode() !== 200) break;
+    var data; try { data = JSON.parse(resp.getContentText()); } catch(ex){ break; }
+    if (!data.records || !data.records.length) break;
+    for (var i=0;i<data.records.length;i++) {
+      var c = quintaRecordToComentario(data.records[i]);
+      if (String(c.id) === String(idCom)) return c.quinta_record_id;
+    }
+    if (data.records.length < 20) break;
+    page++;
+  }
+  return null;
+}
+
+// Elimina un comentario y todas sus respuestas (hilo completo).
+function eliminarComentario(idCom) {
+  // Primero, recolectar el comentario y sus descendientes.
+  var aBorrar = [String(idCom)];
+  // Buscar respuestas directas (un nivel; suficiente para hilos cortos).
+  var page = 1;
+  while (page <= 100) {
+    var url = QUINTA_BASE + '/apps/' + APP_ID + '/dtypes/entity/' + ENTITY_COM
+            + '.json?rest_api_key=' + encodeURIComponent(getApiKey()) + '&page=' + page;
+    var resp = UrlFetchApp.fetch(url, {method:'get', muteHttpExceptions:true});
+    if (resp.getResponseCode() !== 200) break;
+    var data; try { data = JSON.parse(resp.getContentText()); } catch(ex){ break; }
+    if (!data.records || !data.records.length) break;
+    for (var i=0;i<data.records.length;i++) {
+      var c = quintaRecordToComentario(data.records[i]);
+      if (String(c.padre_id) === String(idCom)) aBorrar.push(String(c.id));
+    }
+    if (data.records.length < 20) break;
+    page++;
+  }
+  var okCount = 0;
+  for (var k=0;k<aBorrar.length;k++) {
+    var recId = buscarComRecordId(aBorrar[k]);
+    if (recId) {
+      var u = QUINTA_BASE + '/apps/' + APP_ID + '/dtypes/' + recId
+            + '.json?rest_api_key=' + encodeURIComponent(getApiKey());
+      var r = UrlFetchApp.fetch(u, {method:'delete', muteHttpExceptions:true});
+      if (r.getResponseCode() >= 200 && r.getResponseCode() < 300) okCount++;
+    }
+  }
+  return {ok: okCount > 0, eliminados: okCount};
+}
+
+// Fecha y hora actual en formato d/m/Y H:M (zona horaria de Lima).
+function nowFechaHora() {
+  return Utilities.formatDate(new Date(), 'America/Lima', 'd/M/yyyy HH:mm');
+}
+
 // ====== UTILIDADES DE PRUEBA ================================================
 function _test_listar() {
   var n = obtenerNormas();
@@ -538,4 +689,9 @@ function _test_listar() {
 }
 function _test_apiKey() {
   Logger.log(getApiKey() ? 'API key OK (longitud '+getApiKey().length+')' : 'FALTA REST_API_KEY en Propiedades del Script');
+}
+function _test_comentarios() {
+  var c = obtenerComentarios('1719350000001');
+  Logger.log('Comentarios de la norma 1719350000001: ' + c.length);
+  Logger.log(JSON.stringify(c, null, 2));
 }
