@@ -68,7 +68,8 @@ var F = {
   padre_id:           'cpzsldV3bmb6ZdG1tcIerD',
   hora:               'aLW4yjW7TcJOkqh2tdP1SV',
   region:             'dcV8klFx1dU4omW6DlbCk_',
-  video:              'dcGCkghgTpiyFdSCkWWPjJ'
+  video:              'dcGCkghgTpiyFdSCkWWPjJ',
+  likes:              'cmatn1CSjgaOoZmqzplCkJ'
 };
 // Mapa inverso field_id -> nombre, para leer las respuestas de QuintaDB.
 var F_INV = (function(){ var o={}; for (var k in F) o[F[k]] = k; return o; })();
@@ -81,7 +82,8 @@ var FC = {
   autor:    'dcSge5b8jdD4kLWOtcKXGK',
   texto:    'a-W7lcPvXdKApdNmkQDSkg',
   fecha:    'buWOOhW6PdOykpW4BdPqqK',   // tipo "Fecha y hora", devuelve d/m/Y H:M
-  aprobado: 'b9mmkjW71pW5dcHCoLwSk5'
+  aprobado: 'b9mmkjW71pW5dcHCoLwSk5',
+  likes:    'cQgmk9W5XcWQLPW7FdSX1_'
 };
 
 // ====== CONVERSIÓN DE FECHA ==================================================
@@ -140,6 +142,12 @@ function doGet(e) {
   }
   if (params.com_conteos) {                 // conteo de comentarios por cada norma
     return jsonp(cb, contarComentariosPorNorma());
+  }
+  if (params.like_norma) {
+    return jsonp(cb, withLock(function(){ return darLikeNorma(String(params.like_norma)); }));
+  }
+  if (params.like_comentario) {
+    return jsonp(cb, withLock(function(){ return darLikeComentario(String(params.like_comentario)); }));
   }
   if (params.com_guardar) {
     return jsonp(cb, withLock(function(){
@@ -271,7 +279,8 @@ function quintaRecordToNorma(rec) {
     padreId:       g('padre_id'),
     hora:          g('hora'),
     region:        g('region'),
-    video:         g('video')
+    video:         g('video'),
+    likes:         parseInt(g('likes'),10) || 0
   };
 }
 
@@ -583,7 +592,8 @@ function quintaRecordToComentario(rec) {
     autor:    g('autor'),
     texto:    g('texto'),
     fecha:    g('fecha'),            // viene ya como d/m/Y H:M
-    aprobado: (g('aprobado') === 'TRUE' || g('aprobado') === true)
+    aprobado: (g('aprobado') === 'TRUE' || g('aprobado') === true),
+    likes:    parseInt(g('likes'),10) || 0
   };
 }
 
@@ -738,6 +748,62 @@ function eliminarComentario(idCom) {
 // Fecha y hora actual en formato d/m/Y H:M (zona horaria de Lima).
 function nowFechaHora() {
   return Utilities.formatDate(new Date(), 'America/Lima', 'd/M/yyyy HH:mm');
+}
+
+// ====== LIKES ===============================================================
+// Incrementa en 1 el contador de likes de una norma. Devuelve el nuevo total.
+function darLikeNorma(idApp) {
+  var recId = buscarRecordId(idApp);
+  if (!recId) return {ok:false, error:'norma no encontrada'};
+  // Leer el valor actual de likes
+  var n = null;
+  var normas = obtenerNormas();
+  for (var i=0;i<normas.length;i++) if (String(normas[i].id) === String(idApp)) { n = normas[i]; break; }
+  var nuevo = ((n && n.likes) || 0) + 1;
+  var url = QUINTA_BASE + '/apps/' + APP_ID + '/dtypes/' + recId + '.json';
+  var vals = {}; vals[F.likes] = String(nuevo);
+  var body = { rest_api_key: getApiKey(), values: vals };
+  var resp = UrlFetchApp.fetch(url, {
+    method:'put', contentType:'application/json',
+    payload: JSON.stringify(body), muteHttpExceptions:true
+  });
+  var code = resp.getResponseCode();
+  return (code >= 200 && code < 300) ? {ok:true, likes:nuevo} : {ok:false, error:'HTTP '+code+': '+resp.getContentText()};
+}
+
+// Incrementa en 1 el contador de likes de un comentario.
+function darLikeComentario(idCom) {
+  var recId = buscarComRecordId(idCom);
+  if (!recId) return {ok:false, error:'comentario no encontrado'};
+  // Leer valor actual recorriendo los comentarios
+  var actual = 0;
+  var page = 1;
+  while (page <= 100) {
+    var u = QUINTA_BASE + '/apps/' + APP_ID + '/dtypes/entity/' + ENTITY_COM
+          + '.json?rest_api_key=' + encodeURIComponent(getApiKey()) + '&page=' + page;
+    var rp = UrlFetchApp.fetch(u, {method:'get', muteHttpExceptions:true});
+    if (rp.getResponseCode() !== 200) break;
+    var data; try { data = JSON.parse(rp.getContentText()); } catch(ex){ break; }
+    if (!data.records || !data.records.length) break;
+    var found = false;
+    for (var i=0;i<data.records.length;i++) {
+      var c = quintaRecordToComentario(data.records[i]);
+      if (String(c.id) === String(idCom)) { actual = c.likes || 0; found = true; break; }
+    }
+    if (found) break;
+    if (data.records.length < 20) break;
+    page++;
+  }
+  var nuevo = actual + 1;
+  var url = QUINTA_BASE + '/apps/' + APP_ID + '/dtypes/' + recId + '.json';
+  var vals = {}; vals[FC.likes] = String(nuevo);
+  var body = { rest_api_key: getApiKey(), values: vals };
+  var resp = UrlFetchApp.fetch(url, {
+    method:'put', contentType:'application/json',
+    payload: JSON.stringify(body), muteHttpExceptions:true
+  });
+  var code = resp.getResponseCode();
+  return (code >= 200 && code < 300) ? {ok:true, likes:nuevo} : {ok:false, error:'HTTP '+code+': '+resp.getContentText()};
 }
 
 // ====== UTILIDADES DE PRUEBA ================================================
