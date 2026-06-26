@@ -329,15 +329,21 @@ function buildFormPayload(norma) {
 // ---- CREAR ------------------------------------------------------------------
 function guardarNorma(norma) {
   if (buscarRecordId(norma.id)) return {ok:false, error:'id ya existe'};
-  var url = QUINTA_BASE + '/apps/' + APP_ID + '/dtypes/entity/' + ENTITY_ID + '.json';
+  var url = QUINTA_BASE + '/apps/' + APP_ID + '/dtypes.json';
+  var vals = normaToQuintaValues(norma);
+  var formData = 'rest_api_key=' + encodeURIComponent(getApiKey());
+  formData += '&entity_id=' + encodeURIComponent(ENTITY_ID);
+  for (var fid in vals) {
+    formData += '&values[' + encodeURIComponent(fid) + ']=' + encodeURIComponent(vals[fid]);
+  }
   var resp = UrlFetchApp.fetch(url, {
     method:'post',
     contentType:'application/x-www-form-urlencoded',
-    payload: buildFormPayload(norma),
+    payload: formData,
     muteHttpExceptions:true
   });
   var code = resp.getResponseCode();
-  return (code >= 200 && code < 300) ? {ok:true} : {ok:false, error:resp.getContentText()};
+  return (code >= 200 && code < 300) ? {ok:true} : {ok:false, error:'HTTP '+code+': '+resp.getContentText()};
 }
 
 // ---- ACTUALIZAR -------------------------------------------------------------
@@ -345,25 +351,30 @@ function actualizarNorma(norma) {
   var recId = buscarRecordId(norma.id);
   if (!recId) return {ok:false, error:'registro no encontrado'};
   var url = QUINTA_BASE + '/apps/' + APP_ID + '/dtypes/' + recId + '.json';
+  var body = { rest_api_key: getApiKey(), values: normaToQuintaValues(norma) };
   var resp = UrlFetchApp.fetch(url, {
     method:'put',
-    contentType:'application/x-www-form-urlencoded',
-    payload: buildFormPayload(norma),
+    contentType:'application/json',
+    payload: JSON.stringify(body),
     muteHttpExceptions:true
   });
   var code = resp.getResponseCode();
-  return (code >= 200 && code < 300) ? {ok:true} : {ok:false, error:resp.getContentText()};
+  return (code >= 200 && code < 300) ? {ok:true} : {ok:false, error:'HTTP '+code+': '+resp.getContentText()};
 }
 
 // ---- ELIMINAR ---------------------------------------------------------------
 function eliminarNorma(idApp) {
   var recId = buscarRecordId(idApp);
   if (!recId) return {ok:false, error:'registro no encontrado'};
-  var url = QUINTA_BASE + '/apps/' + APP_ID + '/dtypes/' + recId
-          + '.json?rest_api_key=' + encodeURIComponent(getApiKey());
-  var resp = UrlFetchApp.fetch(url, {method:'delete', muteHttpExceptions:true});
+  var url = QUINTA_BASE + '/apps/' + APP_ID + '/dtypes/' + recId + '.json';
+  var resp = UrlFetchApp.fetch(url, {
+    method:'delete',
+    contentType:'application/json',
+    payload: JSON.stringify({rest_api_key: getApiKey()}),
+    muteHttpExceptions:true
+  });
   var code = resp.getResponseCode();
-  return (code >= 200 && code < 300) ? {ok:true} : {ok:false, error:resp.getContentText()};
+  return (code >= 200 && code < 300) ? {ok:true} : {ok:false, error:'HTTP '+code+': '+resp.getContentText()};
 }
 
 // ====== (2) ARCHIVOS EN DRIVE ===============================================
@@ -613,15 +624,33 @@ function buildComFormPayload(com) {
 function guardarComentario(com) {
   if (!com.texto || !com.texto.trim()) return {ok:false, error:'comentario vacío'};
   if (!com.norma_id) return {ok:false, error:'falta norma_id'};
-  var url = QUINTA_BASE + '/apps/' + APP_ID + '/dtypes/entity/' + ENTITY_COM + '.json';
+  var url = QUINTA_BASE + '/apps/' + APP_ID + '/dtypes.json';
+  var vals = comToQuintaValues(com);
+  var formData = 'rest_api_key=' + encodeURIComponent(getApiKey());
+  formData += '&entity_id=' + encodeURIComponent(ENTITY_COM);
+  for (var fid in vals) {
+    formData += '&values[' + encodeURIComponent(fid) + ']=' + encodeURIComponent(vals[fid]);
+  }
   var resp = UrlFetchApp.fetch(url, {
     method:'post',
     contentType:'application/x-www-form-urlencoded',
-    payload: buildComFormPayload(com),
+    payload: formData,
     muteHttpExceptions:true
   });
   var code = resp.getResponseCode();
-  return (code >= 200 && code < 300) ? {ok:true} : {ok:false, error:resp.getContentText()};
+  return (code >= 200 && code < 300) ? {ok:true} : {ok:false, error:'HTTP '+code+': '+resp.getContentText()};
+}
+
+function comToQuintaValues(com) {
+  var vals = {};
+  vals[FC.id]       = String(com.id || ('CM' + Date.now()));
+  vals[FC.norma_id] = String(com.norma_id || '');
+  vals[FC.padre_id] = String(com.padre_id || '');
+  vals[FC.autor]    = (com.autor || 'Anónimo').substring(0, 80);
+  vals[FC.texto]    = (com.texto || '').substring(0, 2000);
+  vals[FC.fecha]    = com.fecha || nowFechaHora();
+  vals[FC.aprobado] = 'TRUE';
+  return vals;
 }
 
 function buscarComRecordId(idCom) {
@@ -667,9 +696,13 @@ function eliminarComentario(idCom) {
   for (var k=0;k<aBorrar.length;k++) {
     var recId = buscarComRecordId(aBorrar[k]);
     if (recId) {
-      var u = QUINTA_BASE + '/apps/' + APP_ID + '/dtypes/' + recId
-            + '.json?rest_api_key=' + encodeURIComponent(getApiKey());
-      var r = UrlFetchApp.fetch(u, {method:'delete', muteHttpExceptions:true});
+      var u = QUINTA_BASE + '/apps/' + APP_ID + '/dtypes/' + recId + '.json';
+      var r = UrlFetchApp.fetch(u, {
+        method:'delete',
+        contentType:'application/json',
+        payload: JSON.stringify({rest_api_key: getApiKey()}),
+        muteHttpExceptions:true
+      });
       if (r.getResponseCode() >= 200 && r.getResponseCode() < 300) okCount++;
     }
   }
@@ -686,6 +719,19 @@ function _test_listar() {
   var n = obtenerNormas();
   Logger.log('Registros: ' + n.length);
   if (n.length) Logger.log(JSON.stringify(n[0], null, 2));
+}
+function _test_crear_comentario() {
+  var com = {
+    id: 'CMTEST'+Date.now(),
+    norma_id: '1719350000001',
+    padre_id: '',
+    autor: 'Prueba',
+    texto: 'Comentario de prueba',
+    fecha: nowFechaHora()
+  };
+  Logger.log('Fecha generada: ' + com.fecha);
+  var r = guardarComentario(com);
+  Logger.log('Resultado guardarComentario: ' + JSON.stringify(r));
 }
 function _test_apiKey() {
   Logger.log(getApiKey() ? 'API key OK (longitud '+getApiKey().length+')' : 'FALTA REST_API_KEY en Propiedades del Script');
