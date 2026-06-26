@@ -138,6 +138,33 @@ body{background:#CBD5E1;padding:24px 16px;font-family:"IBM Plex Sans",sans-serif
 .r-amber .r-title{color:var(--warning-text);}
 .hotspot{display:inline-flex;align-items:center;gap:2px;padding:5px 12px;border-radius:20px;font-size:14px;font-weight:700;background:var(--accent-tag);color:var(--accent-text);margin:2px;}
 .detail-footer{background:var(--bg);border-top:1px solid var(--border);padding:12px 20px;display:flex;align-items:center;justify-content:space-between;font-size:14px;color:var(--muted);}
+/* ===== Comentarios ===== */
+.com-section{border-top:1px solid var(--border);padding:18px 20px;background:#FCFCFD;}
+.com-head{font-size:14px;font-weight:700;color:var(--subtle);text-transform:uppercase;letter-spacing:0.8px;margin-bottom:14px;display:flex;align-items:center;gap:8px;}
+.com-count-pill{background:#EDE9FE;color:#5B21B6;border-radius:20px;padding:2px 11px;font-size:13px;}
+.com-list{display:flex;flex-direction:column;gap:12px;margin-bottom:18px;}
+.com-item{background:white;border:1px solid var(--border);border-radius:10px;padding:12px 14px;}
+.com-item.reply{margin-left:28px;border-left:3px solid #C4B5FD;background:#FAF9FF;}
+.com-item.reply-2{margin-left:52px;}
+.com-top{display:flex;align-items:baseline;justify-content:space-between;gap:8px;margin-bottom:5px;flex-wrap:wrap;}
+.com-author{font-size:15px;font-weight:700;color:var(--primary);}
+.com-date{font-size:12px;color:var(--subtle);}
+.com-text{font-size:15px;color:var(--text);line-height:1.55;white-space:pre-wrap;word-break:break-word;}
+.com-actions{display:flex;gap:12px;margin-top:7px;}
+.com-act-btn{background:none;border:none;padding:0;font-size:13px;font-weight:600;cursor:pointer;color:#7C3AED;}
+.com-act-btn.del{color:#DC2626;}
+.com-act-btn:hover{text-decoration:underline;}
+.com-form{background:white;border:1px solid var(--border);border-radius:10px;padding:14px;}
+.com-form.reply-form{margin:8px 0 4px 28px;background:#FAF9FF;border-color:#C4B5FD;}
+.com-form input,.com-form textarea{width:100%;border:1px solid var(--border);border-radius:7px;padding:9px 11px;font-size:14px;font-family:inherit;margin-bottom:8px;box-sizing:border-box;}
+.com-form input.com-err,.com-form textarea.com-err{border-color:#DC2626;background:#FEF2F2;}
+.com-form textarea{resize:vertical;min-height:64px;}
+.com-form-row{display:flex;gap:8px;align-items:center;}
+.com-send{background:var(--primary);color:white;border:none;border-radius:8px;padding:10px 20px;font-size:14px;font-weight:700;cursor:pointer;}
+.com-send:hover{opacity:0.92;}
+.com-cancel{background:none;border:none;color:var(--subtle);font-size:14px;cursor:pointer;font-weight:600;}
+.com-empty{font-size:14px;color:var(--subtle);padding:6px 0;font-style:italic;}
+.com-count-card{display:inline-flex;align-items:center;gap:4px;font-size:13px;color:#7C3AED;font-weight:600;}
 .arch-section{margin-top:7px;}
 .arch-section-title{font-size:13px;font-weight:700;color:var(--subtle);text-transform:uppercase;letter-spacing:0.8px;margin-bottom:9px;}
 .arch-link-row{display:flex;flex-direction:column;gap:6px;padding:10px 13px;background:var(--surface);border-radius:8px;border:1px solid var(--border);margin-bottom:7px;}
@@ -370,7 +397,7 @@ body{background:#CBD5E1;padding:24px 16px;font-family:"IBM Plex Sans",sans-serif
 
 <script>
 var SU = "https://script.google.com/macros/s/AKfycbyHIEYaOSKDSyvu4GoIeGi-MvZZECwZWywpYTA1PPParyTKIQdTcyjzmYFkHzlvjq4B/exec";
-var ABRIR_ID = (function(){ try { var p=new URLSearchParams(location.search); return p.get('abrir')||''; } catch(e){ return ''; } })();
+var ABRIR_ID = (function(){ try { var p=new URLSearchParams(location.search); return p.get("abrir")||""; } catch(e){ return ""; } })();
 
 var REGIONES = [
   'Amazonas','Ancash','Apurimac','Arequipa','Ayacucho','Cajamarca',
@@ -846,7 +873,16 @@ function bldDetail(n){
   var tieneLeft = padreH||regionH||disps||archH;
   var bodyStyle = tieneLeft ? "" : "grid-template-columns:1fr";
   return "<div class='detail-body' style='"+bodyStyle+"'>"+(tieneLeft?"<div class='detail-left'>"+padreH+regionH+disps+archH+"</div>":"")+"<div class='detail-right'>"+rH+"</div></div>"+
-    "<div class='detail-footer'><span>Universidad Ricardo Palma - Facultad de Ingeniería</span><strong style='color:var(--primary);'>"+esc(n.rm||"")+"</strong></div>";
+    "<div class='detail-footer'><span>Universidad Ricardo Palma - Facultad de Ingeniería</span><strong style='color:var(--primary);'>"+esc(n.rm||"")+"</strong></div>"+
+    "<div class='com-section' id='com-sec-"+esc(String(n.id))+"' data-norma='"+esc(String(n.id))+"'>"+
+      "<div class='com-head'>Comentarios <span class='com-count-pill' id='com-count-"+esc(String(n.id))+"'>...</span></div>"+
+      "<div class='com-list' id='com-list-"+esc(String(n.id))+"'><div class='com-empty'>Cargando comentarios...</div></div>"+
+      "<div class='com-form'>"+
+        "<input type='text' id='com-autor-"+esc(String(n.id))+"' placeholder='Tu nombre' maxlength='80'>"+
+        "<textarea id='com-texto-"+esc(String(n.id))+"' placeholder='Escribe un comentario...' maxlength='2000'></textarea>"+
+        "<div class='com-form-row'><button class='com-send' onclick='enviarComentario(\""+esc(String(n.id))+"\",\"\")'>Comentar</button></div>"+
+      "</div>"+
+    "</div>";
 }
 
 document.getElementById("filtros").onclick=function(ev){
@@ -860,7 +896,7 @@ document.getElementById("lista").onclick=function(ev){
   var b=ev.target.closest("[data-act]");
   if(b){
     var a=b.getAttribute("data-act"),idx=parseInt(b.getAttribute("data-idx")),id=b.getAttribute("data-nid");
-    if(a==="toggle"){EX[id]=!EX[id];render();}
+    if(a==="toggle"){EX[id]=!EX[id];render();if(EX[id]){setTimeout(function(){cargarComentarios(id);},50);}}
     else if(a==="editar"){abrirEditar(idx);}
     else if(a==="archivar"){NM[idx].arch=true;updSheet(NM[idx],null);render();tst("Archivada");}
     else if(a==="restaurar"){NM[idx].arch=false;updSheet(NM[idx],null);render();tst("Restaurada");}
@@ -934,6 +970,111 @@ function comprimirNorma(n){
 function saveSheet(n){var p=comprimirNorma(n);var cb="_s"+Date.now();var sc=document.createElement("script");window[cb]=function(r){try{delete window[cb];if(sc.parentNode)sc.parentNode.removeChild(sc);}catch(e){}tst(r&&r.ok?"Guardado":"Error al guardar");};sc.src=SU+"?callback="+cb+"&payload="+encodeURIComponent(JSON.stringify(p))+"&t="+Date.now();document.head.appendChild(sc);}
 function updSheet(n,riesgoAnterior){var p=comprimirNorma(n);var cb="_u"+Date.now();var sc=document.createElement("script");window[cb]=function(r){try{delete window[cb];if(sc.parentNode)sc.parentNode.removeChild(sc);}catch(e){}tst(r&&r.ok?"Actualizado":"Error al actualizar");};var raParam=riesgoAnterior?("&riesgoAnterior="+encodeURIComponent(riesgoAnterior)):"";sc.src=SU+"?callback="+cb+"&actualizar="+encodeURIComponent(JSON.stringify(p))+raParam+"&t="+Date.now();document.head.appendChild(sc);}
 function delSheet(id){var cb="_d"+Date.now();var sc=document.createElement("script");window[cb]=function(r){try{delete window[cb];if(sc.parentNode)sc.parentNode.removeChild(sc);}catch(e){}};sc.src=SU+"?eliminar="+String(id)+"&callback="+cb+"&t="+Date.now();document.head.appendChild(sc);}
+
+/* ===================== COMENTARIOS ===================== */
+var COM_CACHE={};   // normaId -> array de comentarios
+
+// Carga los comentarios de una norma vía JSONP y los dibuja.
+function cargarComentarios(normaId){
+  var cb="_cl"+Date.now();
+  window[cb]=function(res){
+    try{delete window[cb];}catch(e){}
+    COM_CACHE[normaId]=Array.isArray(res)?res:[];
+    pintarComentarios(normaId);
+  };
+  var sc=document.createElement("script");
+  sc.onerror=function(){
+    var cont=document.getElementById("com-list-"+normaId);
+    if(cont)cont.innerHTML="<div class='com-empty'>No se pudieron cargar los comentarios.</div>";
+  };
+  sc.src=SU+"?com_listar="+encodeURIComponent(normaId)+"&callback="+cb+"&t="+Date.now();
+  document.head.appendChild(sc);
+}
+
+// Dibuja los comentarios como hilos anidados.
+function pintarComentarios(normaId){
+  var cont=document.getElementById("com-list-"+normaId);
+  var cntEl=document.getElementById("com-count-"+normaId);
+  if(!cont)return;
+  var coms=COM_CACHE[normaId]||[];
+  if(cntEl)cntEl.textContent=coms.length;
+  if(!coms.length){cont.innerHTML="<div class='com-empty'>Aún no hay comentarios. Sé el primero en comentar.</div>";return;}
+  // Indexar por padre
+  var hijosDe={};
+  coms.forEach(function(c){var p=c.padre_id||"";if(!hijosDe[p])hijosDe[p]=[];hijosDe[p].push(c);});
+  var html="";
+  function pinta(c,nivel){
+    var cls="com-item"+(nivel===1?" reply":(nivel>=2?" reply reply-2":""));
+    html+="<div class='"+cls+"'>"+
+      "<div class='com-top'><span class='com-author'>"+esc(c.autor||"Anónimo")+"</span><span class='com-date'>"+esc(c.fecha||"")+"</span></div>"+
+      "<div class='com-text'>"+esc(c.texto||"")+"</div>"+
+      "<div class='com-actions'>"+
+        (nivel<2?"<button class='com-act-btn' onclick='mostrarFormResp(\""+esc(normaId)+"\",\""+esc(c.id)+"\")'>Responder</button>":"")+
+        "<button class='com-act-btn del' onclick='borrarComentario(\""+esc(normaId)+"\",\""+esc(c.id)+"\")'>Eliminar</button>"+
+      "</div>"+
+      "<div id='respform-"+esc(c.id)+"'></div>"+
+    "</div>";
+    var hijos=hijosDe[c.id]||[];
+    hijos.forEach(function(h){pinta(h,nivel+1);});
+  }
+  (hijosDe[""]||[]).forEach(function(c){pinta(c,0);});
+  cont.innerHTML=html;
+}
+
+// Muestra el formulario de respuesta bajo un comentario.
+function mostrarFormResp(normaId,padreId){
+  var slot=document.getElementById("respform-"+padreId);
+  if(!slot)return;
+  if(slot.innerHTML.trim()!==""){slot.innerHTML="";return;}  // toggle
+  slot.innerHTML="<div class='com-form reply-form'>"+
+    "<input type='text' id='resp-autor-"+padreId+"' placeholder='Tu nombre' maxlength='80'>"+
+    "<textarea id='resp-texto-"+padreId+"' placeholder='Escribe tu respuesta...' maxlength='2000'></textarea>"+
+    "<div class='com-form-row'><button class='com-send' onclick='enviarComentario(\""+esc(normaId)+"\",\""+esc(padreId)+"\")'>Responder</button>"+
+    "<button class='com-cancel' onclick='document.getElementById(\"respform-"+esc(padreId)+"\").innerHTML=\"\"'>Cancelar</button></div>"+
+  "</div>";
+}
+
+// Envía un comentario o respuesta. padreId vacío = comentario de primer nivel.
+function enviarComentario(normaId,padreId){
+  var aId=padreId?("resp-autor-"+padreId):("com-autor-"+normaId);
+  var tId=padreId?("resp-texto-"+padreId):("com-texto-"+normaId);
+  var aEl=document.getElementById(aId),tEl=document.getElementById(tId);
+  if(!aEl||!tEl)return;
+  var autor=aEl.value.trim(),texto=tEl.value.trim();
+  var bad=false;
+  if(!autor){aEl.classList.add("com-err");bad=true;}else{aEl.classList.remove("com-err");}
+  if(!texto){tEl.classList.add("com-err");bad=true;}else{tEl.classList.remove("com-err");}
+  if(bad){tst("Completa tu nombre y el comentario");return;}
+  var com={id:"CM"+Date.now(),norma_id:normaId,padre_id:padreId||"",autor:autor,texto:texto};
+  var cb="_cs"+Date.now();
+  window[cb]=function(r){
+    try{delete window[cb];}catch(e){}
+    if(r&&r.ok){
+      tst("Comentario publicado");
+      aEl.value="";tEl.value="";
+      if(padreId){var sl=document.getElementById("respform-"+padreId);if(sl)sl.innerHTML="";}
+      cargarComentarios(normaId);
+    } else { tst("Error al publicar el comentario"); }
+  };
+  var sc=document.createElement("script");
+  sc.src=SU+"?com_guardar="+encodeURIComponent(JSON.stringify(com))+"&callback="+cb+"&t="+Date.now();
+  document.head.appendChild(sc);
+}
+
+// Borra un comentario (y sus respuestas). Visible para cualquiera.
+function borrarComentario(normaId,comId){
+  sfc("¿Eliminar este comentario y sus respuestas?",function(){
+    var cb="_cd"+Date.now();
+    window[cb]=function(r){
+      try{delete window[cb];}catch(e){}
+      if(r&&r.ok){tst("Comentario eliminado");cargarComentarios(normaId);}
+      else{tst("Error al eliminar");}
+    };
+    var sc=document.createElement("script");
+    sc.src=SU+"?com_eliminar="+encodeURIComponent(comId)+"&callback="+cb+"&t="+Date.now();
+    document.head.appendChild(sc);
+  });
+}
 
 function limpErr(){["f-tit","f-fec","f-desc"].forEach(function(fid){document.getElementById(fid).classList.remove("error");});}
 function rndSugs(){var wrap=document.getElementById("etiq-sugs");if(!wrap)return;wrap.innerHTML="";var usadas=getEU();var act=FE.map(function(e){return e.toLowerCase();});usadas.filter(function(e){return act.indexOf(e.toLowerCase())===-1;}).slice(0,10).forEach(function(e){var btn=document.createElement("button");btn.className="etiq-sug";btn.type="button";btn.textContent=e;btn.onclick=function(){FE.push(e);rndFE();};wrap.appendChild(btn);});}
