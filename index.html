@@ -815,6 +815,7 @@ function card(n,idx,nivel){
     (n.url?"<a class='norma-link' href='"+esc(n.url)+"' target='_blank'>Ver publicacion</a>":"")+
     (n.video?"<a class='norma-link' href='"+esc(n.video)+"' target='_blank' style='color:#E53E3E;'>&#9654; Ver video</a>":"")+
     "<a class='wa-link' href='#' onclick='window.open(waUrl(NM["+idx+"]),\"_blank\");return false;'>Compartir por WhatsApp</a>"+
+    "<a class='com-count-card' href='#' onclick='abrirYComentar(\""+id+"\");return false;' title='Ver comentarios'>&#128172; "+(COM_CONTEOS[id]||0)+" comentario"+((COM_CONTEOS[id]||0)===1?"":"s")+"</a>"+
     "</div>"+
     "<div class='norma-detail"+(isO?" open":"")+"'>"+bldDetail(n)+"</div></div>";
 }
@@ -940,6 +941,7 @@ function cargarNormas(){
     if(Array.isArray(res)&&res.length>0){
       NM=res.map(normalizarRegistro);render();tst(NM.length+" registros cargados");
       abrirNoticiaDesdeURL();
+      cargarConteosComentarios();
     } else {NM=[];render();}
   };
   var sc=document.createElement("script");
@@ -973,6 +975,31 @@ function delSheet(id){var cb="_d"+Date.now();var sc=document.createElement("scri
 
 /* ===================== COMENTARIOS ===================== */
 var COM_CACHE={};   // normaId -> array de comentarios
+var COM_CONTEOS={}; // normaId -> cantidad de comentarios
+
+// Carga los conteos de comentarios de todas las noticias (una sola llamada).
+function cargarConteosComentarios(){
+  var cb="_cc"+Date.now();
+  window[cb]=function(res){
+    try{delete window[cb];}catch(e){}
+    COM_CONTEOS=(res&&typeof res==='object')?res:{};
+    render();  // re-pinta las tarjetas con el conteo ya disponible
+  };
+  var sc=document.createElement("script");
+  sc.src=SU+"?com_conteos=1&callback="+cb+"&t="+Date.now();
+  document.head.appendChild(sc);
+}
+
+// Abre la noticia (si no está abierta) y carga/enfoca sus comentarios.
+function abrirYComentar(normaId){
+  if(!EX[normaId])EX[normaId]=true;
+  render();
+  setTimeout(function(){
+    cargarComentarios(normaId);
+    var sec=document.getElementById("com-sec-"+normaId);
+    if(sec)sec.scrollIntoView({behavior:'smooth',block:'center'});
+  },80);
+}
 
 // Carga los comentarios de una norma vía JSONP y los dibuja.
 function cargarComentarios(normaId){
@@ -998,6 +1025,10 @@ function pintarComentarios(normaId){
   if(!cont)return;
   var coms=COM_CACHE[normaId]||[];
   if(cntEl)cntEl.textContent=coms.length;
+  // Sincronizar el contador de la tarjeta con la cuenta real
+  COM_CONTEOS[normaId]=coms.length;
+  var tarjetaLink=document.querySelector("[onclick*='abrirYComentar(\""+normaId+"\")']");
+  if(tarjetaLink)tarjetaLink.innerHTML="&#128172; "+coms.length+" comentario"+(coms.length===1?"":"s");
   if(!coms.length){cont.innerHTML="<div class='com-empty'>Aún no hay comentarios. Sé el primero en comentar.</div>";return;}
   // Indexar por padre
   var hijosDe={};
