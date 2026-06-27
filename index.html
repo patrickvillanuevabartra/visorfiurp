@@ -178,7 +178,8 @@ body{background:#CBD5E1;padding:24px 16px;font-family:"IBM Plex Sans",sans-serif
 .arch-link-icon{font-size:22px;flex-shrink:0;}
 .arch-link-name{font-size:15px;font-weight:600;color:var(--text);word-break:break-word;}
 .arch-img-preview{width:100%;max-height:160px;object-fit:cover;border-radius:8px;margin-bottom:7px;cursor:pointer;}
-.arch-img-full{width:100%;max-width:520px;height:auto;border-radius:10px;margin-bottom:8px;cursor:zoom-in;display:block;border:1px solid var(--border);}
+.arch-franja{padding:18px 20px;border-top:1px solid var(--border);}
+.arch-img-full{width:100%;height:auto;border-radius:10px;margin-bottom:8px;cursor:zoom-in;display:block;border:1px solid var(--border);}
 .img-zoom-overlay{position:fixed;inset:0;background:rgba(0,0,0,0.9);display:none;align-items:center;justify-content:center;z-index:500;padding:20px;cursor:zoom-out;}
 .img-zoom-overlay.open{display:flex;}
 .img-zoom-overlay img{max-width:95vw;max-height:95vh;object-fit:contain;border-radius:6px;}
@@ -908,9 +909,14 @@ function bldDetail(n){
     if(rd.acrecom)rH+="<div class='r-block r-amber'><span class='r-title'>Acción recomendada</span>"+esc(rd.acrecom)+"</div>";
     if(!rd.conflicto&&!(rd.focos&&rd.focos.length)&&!rd.acrecom)rH+="<div style='font-size:16px;color:var(--subtle);padding:8px;'>Sin análisis FI-URP registrado.</div>";
   }
-  var tieneLeft = padreH||regionH||disps||archH;
-  var bodyStyle = tieneLeft ? "" : "grid-template-columns:1fr";
-  return "<div class='detail-body' style='"+bodyStyle+"'>"+(tieneLeft?"<div class='detail-left'>"+padreH+regionH+disps+archH+"</div>":"")+"<div class='detail-right'>"+rH+"</div></div>"+
+  var tieneLeft = padreH||regionH||disps;
+  var bodyStyle = (tieneLeft||archH) ? "" : "grid-template-columns:1fr";
+  var leftContent = tieneLeft ? "<div class='detail-left'>"+padreH+regionH+disps+"</div>" : "";
+  // Si no hay columna izquierda pero sí hay archivos, igual mostramos la columna para no descuadrar
+  if(!tieneLeft && archH) leftContent = "<div class='detail-left'>"+archH+"</div>";
+  var archFranja = (tieneLeft && archH) ? "<div class='arch-franja'>"+archH+"</div>" : "";
+  return "<div class='detail-body' style='"+bodyStyle+"'>"+leftContent+"<div class='detail-right'>"+rH+"</div></div>"+
+    archFranja+
     "<div class='detail-footer'><span>Universidad Ricardo Palma - Facultad de Ingeniería</span><strong style='color:var(--primary);'>"+esc(n.rm||"")+"</strong></div>"+
     "<div class='com-section' id='com-sec-"+esc(String(n.id))+"' data-norma='"+esc(String(n.id))+"'>"+
       "<div class='com-head'>Comentarios <span class='com-count-pill' id='com-count-"+esc(String(n.id))+"'>...</span></div>"+
