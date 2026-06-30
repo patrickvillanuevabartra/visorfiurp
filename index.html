@@ -1304,13 +1304,20 @@ function pintarComentarios(normaId){
   var html="";
   function pinta(c,nivel){
     var cls="com-item"+(nivel===1?" reply":(nivel>=2?" reply reply-2":""));
+    var puedeModificar=esAdmin()||(USER&&c.email&&USER.email&&c.email.toLowerCase()===USER.email.toLowerCase());
+    // Detectar marca de editado y limpiar el texto para mostrar
+    var textoRaw=c.texto||"";
+    var fueEditado=/\u200b\(editado\)$/.test(textoRaw);
+    var textoLimpio=textoRaw.replace(/\u200b\(editado\)$/,"");
     html+="<div class='"+cls+"'>"+
-      "<div class='com-top'><span class='com-author'>"+esc(c.autor||"Anónimo")+"</span><span class='com-date'>"+esc(c.fecha||"")+"</span></div>"+
-      "<div class='com-text'>"+esc(c.texto||"")+"</div>"+
+      "<div class='com-top'><span class='com-author'>"+esc(c.autor||"Anónimo")+"</span><span class='com-date'>"+esc(c.fecha||"")+(fueEditado?" <span style='color:var(--subtle);font-style:italic;'>(editado)</span>":"")+"</span></div>"+
+      "<div class='com-text' id='comtext-"+esc(c.id)+"'>"+esc(textoLimpio)+"</div>"+
+      "<div id='editform-"+esc(c.id)+"'></div>"+
       "<div class='com-actions'>"+
         "<button class='com-like-btn"+(yaDioLike("com",c.id)?" liked":"")+"' onclick='darLikeComentarioFront(\""+esc(c.id)+"\",\""+esc(normaId)+"\",this)'>&#128077; <span class='clike-num'>"+(c.likes||0)+"</span></button>"+
         ((USER&&nivel<2)?"<button class='com-act-btn' onclick='mostrarFormResp(\""+esc(normaId)+"\",\""+esc(c.id)+"\")'>Responder</button>":"")+
-        ((esAdmin()||(USER&&c.email&&USER.email&&c.email.toLowerCase()===USER.email.toLowerCase()))?"<button class='com-act-btn del' onclick='borrarComentario(\""+esc(normaId)+"\",\""+esc(c.id)+"\")'>Eliminar</button>":"")+
+        (puedeModificar?"<button class='com-act-btn' onclick='editarComentarioFront(\""+esc(normaId)+"\",\""+esc(c.id)+"\")'>Editar</button>":"")+
+        (puedeModificar?"<button class='com-act-btn del' onclick='borrarComentario(\""+esc(normaId)+"\",\""+esc(c.id)+"\")'>Eliminar</button>":"")+
       "</div>"+
       "<div id='respform-"+esc(c.id)+"'></div>"+
     "</div>";
@@ -1356,6 +1363,49 @@ function enviarComentario(normaId,padreId){
   };
   var sc=document.createElement("script");
   sc.src=SU+"?com_guardar="+encodeURIComponent(JSON.stringify(com))+"&callback="+cb+"&t="+Date.now();
+  document.head.appendChild(sc);
+}
+
+// Muestra un formulario inline para editar un comentario.
+function editarComentarioFront(normaId,comId){
+  var slot=document.getElementById("editform-"+comId);
+  var textoEl=document.getElementById("comtext-"+comId);
+  if(!slot||!textoEl)return;
+  if(slot.innerHTML.trim()!==""){slot.innerHTML="";textoEl.style.display="";return;} // toggle cerrar
+  // Texto actual sin la marca de editado
+  var arr=COM_CACHE[normaId]||[];
+  var c=arr.find(function(x){return String(x.id)===String(comId);});
+  var actual=(c?(c.texto||""):"").replace(/\u200b\(editado\)$/,"");
+  textoEl.style.display="none";
+  slot.innerHTML="<div class='com-form' style='margin-top:6px;'>"+
+    "<textarea id='editarea-"+esc(comId)+"' maxlength='2000'>"+esc(actual)+"</textarea>"+
+    "<div class='com-form-row'><button class='com-send' onclick='guardarEdicionComentario(\""+esc(normaId)+"\",\""+esc(comId)+"\")'>Guardar</button>"+
+    "<button class='com-cancel' onclick='document.getElementById(\"editform-"+esc(comId)+"\").innerHTML=\"\";document.getElementById(\"comtext-"+esc(comId)+"\").style.display=\"\";'>Cancelar</button></div>"+
+  "</div>";
+}
+
+// Guarda la edición del comentario.
+function guardarEdicionComentario(normaId,comId){
+  var ta=document.getElementById("editarea-"+comId);
+  if(!ta)return;
+  var nuevo=ta.value.trim();
+  if(!nuevo){tst("El comentario no puede quedar vacío");return;}
+  // Agregar marca de editado (carácter invisible + (editado))
+  var textoFinal=nuevo+"\u200b(editado)";
+  var cb="_ce"+Date.now();
+  window[cb]=function(r){
+    try{delete window[cb];}catch(e){}
+    if(r&&r.ok){
+      tst("Comentario actualizado");
+      var arr=COM_CACHE[normaId]||[];
+      var c=arr.find(function(x){return String(x.id)===String(comId);});
+      if(c)c.texto=textoFinal;
+      pintarComentarios(normaId);
+    } else { tst("Error al editar"); }
+  };
+  var payload={id:comId,texto:textoFinal};
+  var sc=document.createElement("script");
+  sc.src=SU+"?com_editar="+encodeURIComponent(JSON.stringify(payload))+"&callback="+cb+"&t="+Date.now();
   document.head.appendChild(sc);
 }
 
