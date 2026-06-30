@@ -178,7 +178,11 @@ body{background:#CBD5E1;padding:24px 16px;font-family:"IBM Plex Sans",sans-serif
 .arch-link-icon{font-size:22px;flex-shrink:0;}
 .arch-link-name{font-size:15px;font-weight:600;color:var(--text);word-break:break-word;}
 .arch-img-preview{width:100%;max-height:160px;object-fit:cover;border-radius:8px;margin-bottom:7px;cursor:pointer;}
-.arch-franja{padding:18px 20px;border-top:1px solid var(--border);}
+.arch-franja{padding:18px 20px 8px;}
+.embed-section{padding:18px 20px 8px;}
+.embed-section-title{font-size:13px;font-weight:700;color:var(--subtle);text-transform:uppercase;letter-spacing:0.8px;margin-bottom:10px;}
+.embed-wrap{position:relative;width:100%;height:0;overflow:hidden;border-radius:10px;border:1px solid var(--border);margin-bottom:8px;background:#F8FAFC;}
+.embed-wrap iframe{position:absolute;top:0;left:0;width:100%;height:100%;border:0;}
 .arch-img-full{width:100%;height:auto;border-radius:10px;margin-bottom:8px;cursor:zoom-in;display:block;border:1px solid var(--border);}
 .img-zoom-overlay{position:fixed;inset:0;background:rgba(0,0,0,0.9);display:none;align-items:center;justify-content:center;z-index:500;padding:20px;cursor:zoom-out;}
 .img-zoom-overlay.open{display:flex;}
@@ -319,7 +323,7 @@ body{background:#CBD5E1;padding:24px 16px;font-family:"IBM Plex Sans",sans-serif
     <button class="fbtn" data-fil="nuevas">Últimas 48h</button>
     <button class="fbtn" data-fil="arch">Archivo histórico</button>
     <button class="fbtn" data-fil="consulta">En consulta pública</button>
-    <button class="fbtn" data-fil="riesgo">Con alerta Facultad de Ingeniería - URP</button>
+    <button class="fbtn" data-fil="riesgo">Con alerta de riesgo u oportunidad Facultad de Ingeniería - URP</button>
     <button class="fbtn" data-fil="destacados">Destacados</button>
   </div>
   <div id="lista"></div>
@@ -367,6 +371,7 @@ body{background:#CBD5E1;padding:24px 16px;font-family:"IBM Plex Sans",sans-serif
     </div>
     <div class="fg"><label>URL</label><input type="text" id="f-url" placeholder="https://..."></div>
     <div class="fg"><label>Video <span style="font-weight:400;color:var(--muted);font-size:12px;">(opcional)</span></label><input type="text" id="f-video" placeholder="Link de YouTube, Facebook, etc."></div>
+    <div class="fg"><label>Diseño incrustado <span style="font-weight:400;color:var(--muted);font-size:12px;">(opcional)</span></label><textarea id="f-embed" style="height:80px;font-family:monospace;font-size:13px;" placeholder="Pega aquí el código para insertar de Canva, YouTube, etc. (el que empieza con &lt;iframe...)"></textarea><div class="hint">En Canva: Compartir → Más → Insertar → copia el código y pégalo aquí.</div></div>
     <div class="fg"><label>Descripción <span class="req">*</span></label><textarea id="f-desc" style="height:80px;" placeholder="Resumen general..."></textarea></div>
     <div class="fg">
       <label>Etiquetas personalizadas</label>
@@ -409,6 +414,7 @@ body{background:#CBD5E1;padding:24px 16px;font-family:"IBM Plex Sans",sans-serif
 
 <script>
 var SU = "https://script.google.com/macros/s/AKfycbyHIEYaOSKDSyvu4GoIeGi-MvZZECwZWywpYTA1PPParyTKIQdTcyjzmYFkHzlvjq4B/exec";
+var PORTAL_URL = "https://patrickvillanuevabartra.github.io/visorfiurp/";
 var ABRIR_ID = (function(){ try { var p=new URLSearchParams(location.search); return p.get("abrir")||""; } catch(e){ return ""; } })();
 
 var REGIONES = [
@@ -489,6 +495,38 @@ function esImagen(url){
   if(url.match(/i\.ibb\.co|i\.postimg\.cc|imgur\.com\/[a-zA-Z0-9]+\.(jpg|png|jpeg|gif|webp)/i))return true;
   return false;
 }
+// Valida que el código embebido sea un iframe de un servicio confiable.
+// Devuelve el HTML seguro a mostrar, o "" si no es válido/confiable.
+function embedSeguro(code){
+  if(!code||!code.trim())return"";
+  var c=code.trim();
+  // Extraer el src del primer iframe
+  var m=c.match(/<iframe[^>]*\ssrc=["']([^"']+)["'][^>]*>/i);
+  if(!m)return"";
+  var src=m[1];
+  // Lista blanca de dominios confiables
+  var permitidos=[
+    "canva.com","www.canva.com",
+    "youtube.com","www.youtube.com","youtube-nocookie.com","www.youtube-nocookie.com",
+    "docs.google.com","drive.google.com",
+    "player.vimeo.com","vimeo.com",
+    "view.genially.com","genial.ly",
+    "prezi.com","www.prezi.com","onedrive.live.com","1drv.ms",
+    "facebook.com","www.facebook.com","fb.watch"
+  ];
+  var host="";
+  try{ host=src.replace(/^https?:\/\//,"").split("/")[0].toLowerCase().split("?")[0]; }catch(e){return"";}
+  var ok=permitidos.some(function(d){return host===d||host.endsWith("."+d);});
+  if(!ok)return"";
+  // Reconstruir un iframe limpio (solo atributos seguros)
+  var wM=c.match(/width=["']?(\d+)/i); var hM=c.match(/height=["']?(\d+)/i);
+  var ratio=(wM&&hM)?(parseInt(hM[1])/parseInt(wM[1])*100):56.25;
+  if(!isFinite(ratio)||ratio<=0)ratio=56.25;
+  return "<div class='embed-wrap' style='padding-bottom:"+ratio.toFixed(2)+"%;'>"+
+         "<iframe src='"+esc(src)+"' frameborder='0' allowfullscreen loading='lazy' "+
+         "allow='fullscreen' referrerpolicy='no-referrer'></iframe></div>";
+}
+
 // Abre una imagen a pantalla completa.
 function ampliarImagen(url){
   var ov=document.getElementById("imgZoomOverlay");
@@ -594,7 +632,7 @@ function waUrl(n){
   }
   if(n.url){msg+='*Enlace a la publicacion:*\n'+n.url+'\n\n';}
   msg+='*Ver en el portal VISOR:*\n';
-  msg+=SU+'?abrir='+String(n.id)+'\n\n';
+  msg+=PORTAL_URL+'?abrir='+String(n.id)+'\n\n';
   msg+='_Universidad Ricardo Palma - Facultad de Ingeniería_';
   return'https://wa.me/?text='+encodeURIComponent(msg);
 }
@@ -914,8 +952,12 @@ function bldDetail(n){
   var leftContent = tieneLeft ? "<div class='detail-left'>"+padreH+regionH+disps+"</div>" : "";
   // Los archivos (imágenes) SIEMPRE van en franja de ancho completo
   var archFranja = archH ? "<div class='arch-franja'>"+archH+"</div>" : "";
-  return "<div class='detail-body' style='"+bodyStyle+"'>"+leftContent+"<div class='detail-right'>"+rH+"</div></div>"+
+  // Diseño incrustado (Canva, YouTube, etc.) validado por seguridad
+  var embHtml = embedSeguro(n.embed||"");
+  var embFranja = embHtml ? "<div class='embed-section'><div class='embed-section-title'>Diseño / contenido incrustado</div>"+embHtml+"</div>" : "";
+  return embFranja+
     archFranja+
+    "<div class='detail-body' style='"+bodyStyle+"'>"+leftContent+"<div class='detail-right'>"+rH+"</div></div>"+
     "<div class='detail-footer'><span>Universidad Ricardo Palma - Facultad de Ingeniería</span><strong style='color:var(--primary);'>"+esc(n.rm||"")+"</strong></div>"+
     "<div class='com-section' id='com-sec-"+esc(String(n.id))+"' data-norma='"+esc(String(n.id))+"'>"+
       "<div class='com-head'>Comentarios <span class='com-count-pill' id='com-count-"+esc(String(n.id))+"'>...</span></div>"+
@@ -997,6 +1039,7 @@ function comprimirNorma(n){
   var c={id:n.id,titulo:n.titulo,rm:n.rm,estado:n.estado,riesgo:n.riesgo,fecha:n.fecha,arch:n.arch,destacado:n.destacado};
   if(n.url)c.url=n.url;
   if(n.video)c.video=n.video;
+  if(n.embed)c.embed=n.embed;
   if(n.desc)c.desc=n.desc;
   if(n.hora)c.hora=n.hora;
   if(n.region)c.region=n.region;
@@ -1214,7 +1257,7 @@ function abrirModal(){
   document.getElementById("linksPreviewList").innerHTML="";
   document.getElementById("f-link-url").value="";
   document.getElementById("f-link-nombre").value="";
-  ["f-tit","f-rm","f-desc","f-conflicto","f-acrecom","f-url","f-video"].forEach(function(fid){document.getElementById(fid).value="";});
+  ["f-tit","f-rm","f-desc","f-conflicto","f-acrecom","f-url","f-video","f-embed"].forEach(function(fid){document.getElementById(fid).value="";});
   document.getElementById("f-riesgo").value="ninguno";
   document.getElementById("f-est").value="";
   limpErr();rndFocos();rndFE();
@@ -1242,6 +1285,7 @@ function abrirEditar(idx){
   document.getElementById("f-hora").value=n.hora||"";
   document.getElementById("f-url").value=n.url||"";
   document.getElementById("f-video").value=n.video||"";
+  document.getElementById("f-embed").value=n.embed||"";
   document.getElementById("f-desc").value=n.desc||"";
   document.getElementById("f-riesgo").value=n.riesgo||"ninguno";
   document.getElementById("f-conflicto").value=(n.riesgoDetalle&&n.riesgoDetalle.conflicto)||"";
@@ -1277,7 +1321,7 @@ function guardar(){
   var pf2=d.fec.split("-");var fs=parseInt(pf2[2])+"/"+parseInt(pf2[1])+"/"+pf2[0];
   var n={id:'N'+Date.now(),titulo:d.t,rm:d.r,estado:d.est,
     riesgo:document.getElementById("f-riesgo").value,desc:d.dsc,
-    url:document.getElementById("f-url").value.trim(),video:document.getElementById("f-video").value.trim(),fecha:fs,hora:d.hora||"",
+    url:document.getElementById("f-url").value.trim(),video:document.getElementById("f-video").value.trim(),embed:document.getElementById("f-embed").value.trim(),fecha:fs,hora:d.hora||"",
     region:d.region||"",
     arch:false,destacado:false,heroTitle:d.t,heroSub:'',
     etiquetas:FE.slice(),disposiciones:d.di,relacionadas:[],
@@ -1296,7 +1340,7 @@ function actualizar(){
       NM[i].titulo=d.t;NM[i].rm=d.r;NM[i].estado=d.est;
       NM[i].fecha=String(EFO).split(' ')[0];NM[i].hora=d.hora||'';
       NM[i].region=d.region||'';
-      NM[i].url=document.getElementById("f-url").value.trim();NM[i].video=document.getElementById("f-video").value.trim();NM[i].desc=d.dsc;
+      NM[i].url=document.getElementById("f-url").value.trim();NM[i].video=document.getElementById("f-video").value.trim();NM[i].embed=document.getElementById("f-embed").value.trim();NM[i].desc=d.dsc;
       NM[i].riesgo=riesgoNuevo;NM[i].heroTitle=d.t;
       NM[i].etiquetas=FE.slice();NM[i].disposiciones=d.di;NM[i].archivos=FA.slice();
       NM[i].padreId=PADRE_ID||'';
