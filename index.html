@@ -458,6 +458,7 @@ function nivelOportDe(idx){ if(!idx)return ""; if(idx>=10)return"muyalta"; if(id
 var PROB_OPTS = [{v:1,t:"1 - Raro"},{v:2,t:"2 - Improbable"},{v:3,t:"3 - Probable"},{v:4,t:"4 - Casi seguro"}];
 var IMP_RIESGO_OPTS = [{v:1,t:"1 - Leve"},{v:2,t:"2 - Moderado"},{v:3,t:"3 - Mayor"},{v:4,t:"4 - Catastrófico"}];
 var IMP_OPORT_OPTS = [{v:1,t:"1 - Bajo"},{v:2,t:"2 - Moderado"},{v:3,t:"3 - Alto"}];
+var NM=[],FL="todas",EX={},HX={},FC=[],FE=[],FA=[],PCB=null,EID=null,EFO=null,EFI=null,AO=false,RIESGO_ORIGINAL=null,PADRE_ID=null;
 var ETIQ_EXTRA=[];
 
 function pf(f){try{var s=String(f).split(" ")[0].split("/");if(s.length===3)return new Date(parseInt(s[2]),parseInt(s[1])-1,parseInt(s[0]));return new Date(0);}catch(e){return new Date(0);}}
@@ -1333,8 +1334,6 @@ function abrirModal(){
   document.getElementById("f-hora").value="";
   document.getElementById("f-region").value="";
   document.getElementById("disps-list").innerHTML="";
-  document.getElementById("riesgo-desc-box").className="riesgo-desc";
-  document.getElementById("riesgo-desc-box").textContent="";
   document.getElementById("idx-buscar").value="";
   document.getElementById("idx-resultados").classList.remove("open");
   document.getElementById("idx-seleccionado-wrap").innerHTML="";
