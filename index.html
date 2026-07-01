@@ -309,6 +309,7 @@ body{background:#CBD5E1;padding:24px 16px;font-family:"IBM Plex Sans",sans-serif
   </div>
   <button class="btn-add" id="btnAgregar">+ Agregar noticia o norma nueva</button>
   <button class="etiq-mgr-toggle" id="btnEtiqMgr">&#127991; Gestionar etiquetas</button>
+  <button class="etiq-mgr-toggle" id="btnUsrMgr">&#128100; Gestionar usuarios</button>
   <div class="etiq-mgr-panel" id="etiqMgrPanel">
     <div class="etiq-mgr-header">Gestión de etiquetas</div>
     <div class="etiq-mgr-new">
@@ -316,6 +317,16 @@ body{background:#CBD5E1;padding:24px 16px;font-family:"IBM Plex Sans",sans-serif
       <button id="etiqMgrAdd">+ Agregar</button>
     </div>
     <div class="etiq-mgr-list" id="etiqMgrList"></div>
+  </div>
+  <div class="etiq-mgr-panel" id="usrMgrPanel">
+    <div class="etiq-mgr-header">Usuarios que reciben notificaciones</div>
+    <div style="font-size:13px;color:var(--muted);margin-bottom:10px;">Estos correos recibirán un aviso cuando se registre un riesgo u oportunidad de nivel medio o alto. El comentar sigue siendo libre para cualquiera.</div>
+    <div class="etiq-mgr-new">
+      <input type="email" id="usrMgrEmail" placeholder="correo@ejemplo.com" style="flex:2;">
+      <input type="text" id="usrMgrNombre" placeholder="Nombre (opcional)" style="flex:1;">
+      <button id="usrMgrAdd">+ Agregar</button>
+    </div>
+    <div class="etiq-mgr-list" id="usrMgrList"><div style="color:var(--subtle);font-size:13px;">Cargando...</div></div>
   </div>
   <div class="search-bar">
     <div class="search-input-wrap"><span class="search-icon">&#128269;</span><input type="text" id="searchQ" placeholder="Buscar por título, descripción, fuente..."></div>
@@ -489,8 +500,10 @@ function pintarSesion(){
   // Mostrar el botón "+ Agregar" y "Gestionar etiquetas" solo a administradores
   var btnAdd=document.getElementById("btnAgregar");
   var btnEtq=document.getElementById("btnEtiqMgr");
+  var btnUsr=document.getElementById("btnUsrMgr");
   if(btnAdd)btnAdd.style.display=esAdmin()?"":"none";
   if(btnEtq)btnEtq.style.display=esAdmin()?"":"none";
+  if(btnUsr)btnUsr.style.display=esAdmin()?"":"none";
   if(!cont)return;
   if(USER){
     var inicial=(USER.nombre||"U").charAt(0).toUpperCase();
@@ -514,6 +527,72 @@ function initGoogleLogin(){
     } else { setTimeout(tryInit,300); }
   }
   tryInit();
+}
+
+// ====== GESTIÓN DE USUARIOS (solo admin) ======
+var USR_LISTA=[];
+function cargarUsuarios(){
+  var cb="_ul"+Date.now();
+  window[cb]=function(res){
+    try{delete window[cb];}catch(e){}
+    USR_LISTA=Array.isArray(res)?res:[];
+    pintarUsuarios();
+  };
+  var sc=document.createElement("script");
+  sc.src=SU+"?usr_listar=1&callback="+cb+"&t="+Date.now();
+  document.head.appendChild(sc);
+}
+
+function pintarUsuarios(){
+  var cont=document.getElementById("usrMgrList");
+  if(!cont)return;
+  if(!USR_LISTA.length){cont.innerHTML="<div style='color:var(--subtle);font-size:13px;'>Aún no hay usuarios registrados.</div>";return;}
+  var html="";
+  USR_LISTA.forEach(function(u){
+    html+="<div style='display:flex;align-items:center;gap:8px;padding:8px 10px;border:1px solid var(--border);border-radius:8px;margin-bottom:6px;'>"+
+      "<div style='flex:1;'><div style='font-weight:600;font-size:14px;'>"+esc(u.nombre||"(sin nombre)")+"</div><div style='font-size:12px;color:var(--muted);'>"+esc(u.email)+"</div></div>"+
+      "<button onclick='toggleUsuario(\""+esc(u.email)+"\")' style='background:"+(u.activo?"#DCFCE7":"#FEE2E2")+";color:"+(u.activo?"#16A34A":"#DC2626")+";border:0;border-radius:6px;padding:5px 10px;font-size:12px;font-weight:700;cursor:pointer;'>"+(u.activo?"Activo":"Inactivo")+"</button>"+
+      "<button onclick='borrarUsuario(\""+esc(u.recordId)+"\")' style='background:none;border:1px solid var(--border);border-radius:6px;padding:5px 10px;font-size:12px;cursor:pointer;color:var(--muted);'>Borrar</button>"+
+    "</div>";
+  });
+  cont.innerHTML=html;
+}
+
+function agregarUsuario(){
+  var email=document.getElementById("usrMgrEmail").value.trim();
+  var nombre=document.getElementById("usrMgrNombre").value.trim();
+  if(!email||email.indexOf("@")<0){tst("Ingresa un correo válido");return;}
+  var cb="_ug"+Date.now();
+  window[cb]=function(r){
+    try{delete window[cb];}catch(e){}
+    if(r&&r.ok){tst("Usuario guardado");document.getElementById("usrMgrEmail").value="";document.getElementById("usrMgrNombre").value="";cargarUsuarios();}
+    else{tst("Error al guardar usuario");}
+  };
+  var u={email:email,nombre:nombre,activo:true};
+  var sc=document.createElement("script");
+  sc.src=SU+"?usr_guardar="+encodeURIComponent(JSON.stringify(u))+"&callback="+cb+"&t="+Date.now();
+  document.head.appendChild(sc);
+}
+
+function toggleUsuario(email){
+  var u=USR_LISTA.find(function(x){return x.email===email;});
+  if(!u)return;
+  var cb="_ut"+Date.now();
+  window[cb]=function(r){try{delete window[cb];}catch(e){}if(r&&r.ok)cargarUsuarios();else tst("Error");};
+  var payload={email:u.email,nombre:u.nombre,activo:!u.activo};
+  var sc=document.createElement("script");
+  sc.src=SU+"?usr_guardar="+encodeURIComponent(JSON.stringify(payload))+"&callback="+cb+"&t="+Date.now();
+  document.head.appendChild(sc);
+}
+
+function borrarUsuario(recordId){
+  sfc("¿Quitar este usuario de la lista de notificaciones?",function(){
+    var cb="_ud"+Date.now();
+    window[cb]=function(r){try{delete window[cb];}catch(e){}if(r&&r.ok){tst("Usuario eliminado");cargarUsuarios();}else tst("Error al eliminar");};
+    var sc=document.createElement("script");
+    sc.src=SU+"?usr_eliminar="+encodeURIComponent(recordId)+"&callback="+cb+"&t="+Date.now();
+    document.head.appendChild(sc);
+  });
 }
 
 var REGIONES = [
@@ -1619,6 +1698,13 @@ window.onload=function(){
     document.getElementById("etiqMgrPanel").classList.toggle("open");
     rndEtiqMgr();
   };
+  document.getElementById("btnUsrMgr").onclick=function(){
+    var p=document.getElementById("usrMgrPanel");
+    p.classList.toggle("open");
+    if(p.classList.contains("open"))cargarUsuarios();
+  };
+  document.getElementById("usrMgrAdd").onclick=agregarUsuario;
+  document.getElementById("usrMgrEmail").addEventListener("keydown",function(e){if(e.key==="Enter")agregarUsuario();});
   document.getElementById("etiqMgrAdd").onclick=function(){
     var v=document.getElementById("etiqMgrInput").value.trim();
     if(!v){tst("Escribe un nombre de etiqueta");return;}
