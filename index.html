@@ -1193,31 +1193,43 @@ function bldDetail(n){
   }
   var rd=n.riesgoDetalle||{};
   var esOport = n.tipo_ro==="oportunidad" && n.indice_ro;
-  var rH="<div class='oaipcs-label'>FI-URP - "+(esOport?"Oportunidad Asociada":"Riesgo Asociado")+"</div>";
-  if(esOport){
-    var onk=nivelOportDe(n.indice_ro);var oi=OPP[onk];
-    var fHo="";var fso=rd.focos||[];
-    for(var jo=0;jo<fso.length;jo++)fHo+="<span class='hotspot'>"+esc(fso[jo])+"</span>";
-    if(oi)rH+="<div class='risk-row' style='background:"+oi.bgRow+";border-color:"+oi.bRow+";'><div class='pulse' style='background:"+oi.dot+";'></div><span style='font-size:17px;font-weight:700;color:"+oi.dot+";'>Nivel: "+oi.label+" (índice "+n.indice_ro+")</span></div>";
-    if(rd.conflicto)rH+="<div class='r-block' style='background:#EFF6FF;border-left:3px solid #2563EB;'><span class='r-title' style='color:#1D4ED8;'>Descripción de la oportunidad</span>"+esc(rd.conflicto)+"</div>";
-    if(fso.length)rH+="<div class='r-block' style='background:#EFF6FF;border-left:3px solid #2563EB;'><span class='r-title' style='color:#1D4ED8;'>Actores</span><div style='margin-top:5px;'>"+fHo+"</div></div>";
-    if(rd.acrecom)rH+="<div class='r-block r-amber'><span class='r-title'>Acción recomendada</span>"+esc(rd.acrecom)+"</div>";
-  } else if(ri){
-    var fH="";var fs=rd.focos||[];
-    for(var j=0;j<fs.length;j++)fH+="<span class='hotspot'>"+esc(fs[j])+"</span>";
-    rH+="<div class='risk-row' style='background:"+ri.bgRow+";border-color:"+ri.bRow+";'><div class='pulse' style='background:"+ri.dot+";'></div><span style='font-size:17px;font-weight:700;color:"+ri.dot+";'>Nivel: "+ri.label+(n.indice_ro?" (índice "+n.indice_ro+")":"")+"</span></div>";
-    if(rd.conflicto)rH+="<div class='r-block r-red'><span class='r-title'>Descripcion del riesgo</span>"+esc(rd.conflicto)+"</div>";
-    if(fs.length)rH+="<div class='r-block r-red'><span class='r-title'>Actores</span><div style='margin-top:5px;'>"+fH+"</div></div>";
-    if(rd.acrecom)rH+="<div class='r-block r-amber'><span class='r-title'>Acción recomendada</span>"+esc(rd.acrecom)+"</div>";
-  } else {
-    if(rd.conflicto)rH+="<div class='r-block r-red'><span class='r-title'>Descripcion del riesgo</span>"+esc(rd.conflicto)+"</div>";
-    if(rd.focos&&rd.focos.length){var fH2="";for(var k=0;k<rd.focos.length;k++)fH2+="<span class='hotspot'>"+esc(rd.focos[k])+"</span>";rH+="<div class='r-block r-red'><span class='r-title'>Actores</span><div style='margin-top:5px;'>"+fH2+"</div></div>";}
-    if(rd.acrecom)rH+="<div class='r-block r-amber'><span class='r-title'>Acción recomendada</span>"+esc(rd.acrecom)+"</div>";
-    if(!rd.conflicto&&!(rd.focos&&rd.focos.length)&&!rd.acrecom)rH+="<div style='font-size:16px;color:var(--subtle);padding:8px;'>Sin análisis FI-URP registrado.</div>";
+  // ¿Hay análisis real de riesgo/oportunidad?
+  var hayAnalisis = !!(esOport || ri || rd.conflicto || (rd.focos&&rd.focos.length) || rd.acrecom);
+  var rH="";
+  if(hayAnalisis){
+    rH="<div class='oaipcs-label'>FI-URP - "+(esOport?"Oportunidad Asociada":"Riesgo Asociado")+"</div>";
+    if(esOport){
+      var onk=nivelOportDe(n.indice_ro);var oi=OPP[onk];
+      var fHo="";var fso=rd.focos||[];
+      for(var jo=0;jo<fso.length;jo++)fHo+="<span class='hotspot'>"+esc(fso[jo])+"</span>";
+      if(oi)rH+="<div class='risk-row' style='background:"+oi.bgRow+";border-color:"+oi.bRow+";'><div class='pulse' style='background:"+oi.dot+";'></div><span style='font-size:17px;font-weight:700;color:"+oi.dot+";'>Nivel: "+oi.label+" (índice "+n.indice_ro+")</span></div>";
+      if(rd.conflicto)rH+="<div class='r-block' style='background:#EFF6FF;border-left:3px solid #2563EB;'><span class='r-title' style='color:#1D4ED8;'>Descripción de la oportunidad</span>"+esc(rd.conflicto)+"</div>";
+      if(fso.length)rH+="<div class='r-block' style='background:#EFF6FF;border-left:3px solid #2563EB;'><span class='r-title' style='color:#1D4ED8;'>Actores</span><div style='margin-top:5px;'>"+fHo+"</div></div>";
+      if(rd.acrecom)rH+="<div class='r-block r-amber'><span class='r-title'>Acción recomendada</span>"+esc(rd.acrecom)+"</div>";
+    } else if(ri){
+      var fH="";var fs=rd.focos||[];
+      for(var j=0;j<fs.length;j++)fH+="<span class='hotspot'>"+esc(fs[j])+"</span>";
+      rH+="<div class='risk-row' style='background:"+ri.bgRow+";border-color:"+ri.bRow+";'><div class='pulse' style='background:"+ri.dot+";'></div><span style='font-size:17px;font-weight:700;color:"+ri.dot+";'>Nivel: "+ri.label+(n.indice_ro?" (índice "+n.indice_ro+")":"")+"</span></div>";
+      if(rd.conflicto)rH+="<div class='r-block r-red'><span class='r-title'>Descripcion del riesgo</span>"+esc(rd.conflicto)+"</div>";
+      if(fs.length)rH+="<div class='r-block r-red'><span class='r-title'>Actores</span><div style='margin-top:5px;'>"+fH+"</div></div>";
+      if(rd.acrecom)rH+="<div class='r-block r-amber'><span class='r-title'>Acción recomendada</span>"+esc(rd.acrecom)+"</div>";
+    } else {
+      if(rd.conflicto)rH+="<div class='r-block r-red'><span class='r-title'>Descripcion del riesgo</span>"+esc(rd.conflicto)+"</div>";
+      if(rd.focos&&rd.focos.length){var fH2="";for(var k=0;k<rd.focos.length;k++)fH2+="<span class='hotspot'>"+esc(rd.focos[k])+"</span>";rH+="<div class='r-block r-red'><span class='r-title'>Actores</span><div style='margin-top:5px;'>"+fH2+"</div></div>";}
+      if(rd.acrecom)rH+="<div class='r-block r-amber'><span class='r-title'>Acción recomendada</span>"+esc(rd.acrecom)+"</div>";
+    }
   }
   var tieneLeft = padreH||regionH||disps;
-  var bodyStyle = tieneLeft ? "" : "grid-template-columns:1fr";
-  var leftContent = tieneLeft ? "<div class='detail-left'>"+padreH+regionH+disps+"</div>" : "";
+  // Si NO hay análisis: la columna izquierda ocupa todo el ancho (sin columna derecha)
+  var bodyStyle, bodyInner;
+  if(hayAnalisis){
+    bodyStyle = tieneLeft ? "" : "grid-template-columns:1fr";
+    var leftContent = tieneLeft ? "<div class='detail-left'>"+padreH+regionH+disps+"</div>" : "";
+    bodyInner = leftContent+"<div class='detail-right'>"+rH+"</div>";
+  } else {
+    bodyStyle = "grid-template-columns:1fr";
+    bodyInner = tieneLeft ? "<div class='detail-left' style='border-right:none;'>"+padreH+regionH+disps+"</div>" : "";
+  }
   // Los archivos (imágenes) SIEMPRE van en franja de ancho completo
   var archFranja = archH ? "<div class='arch-franja'>"+archH+"</div>" : "";
   // Diseño incrustado (Canva, YouTube, etc.) validado por seguridad
@@ -1225,7 +1237,7 @@ function bldDetail(n){
   var embFranja = embHtml ? "<div class='embed-section'><div class='embed-section-title'>Diseño / contenido incrustado</div>"+embHtml+"</div>" : "";
   return embFranja+
     archFranja+
-    "<div class='detail-body' style='"+bodyStyle+"'>"+leftContent+"<div class='detail-right'>"+rH+"</div></div>"+
+    "<div class='detail-body' style='"+bodyStyle+"'>"+bodyInner+"</div>"+
     "<div class='detail-footer'><span>Universidad Ricardo Palma - Facultad de Ingeniería</span><strong style='color:var(--primary);'>"+esc(n.rm||"")+"</strong></div>"+
     "<div class='com-section' id='com-sec-"+esc(String(n.id))+"' data-norma='"+esc(String(n.id))+"'>"+
       "<div class='com-head'>Comentarios <span class='com-count-pill' id='com-count-"+esc(String(n.id))+"'>...</span></div>"+
