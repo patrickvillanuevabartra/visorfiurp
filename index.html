@@ -310,6 +310,7 @@ body{background:#CBD5E1;padding:24px 16px;font-family:"IBM Plex Sans",sans-serif
   <button class="btn-add" id="btnAgregar">+ Agregar noticia o norma nueva</button>
   <button class="etiq-mgr-toggle" id="btnEtiqMgr">&#127991; Gestionar etiquetas</button>
   <button class="etiq-mgr-toggle" id="btnUsrMgr">&#128100; Gestionar usuarios</button>
+  <button class="etiq-mgr-toggle" id="btnTplMgr">&#9993; Plantillas de correo</button>
   <div class="etiq-mgr-panel" id="etiqMgrPanel">
     <div class="etiq-mgr-header">Gestión de etiquetas</div>
     <div class="etiq-mgr-new">
@@ -327,6 +328,11 @@ body{background:#CBD5E1;padding:24px 16px;font-family:"IBM Plex Sans",sans-serif
       <button id="usrMgrAdd">+ Agregar</button>
     </div>
     <div class="etiq-mgr-list" id="usrMgrList"><div style="color:var(--subtle);font-size:13px;">Cargando...</div></div>
+  </div>
+  <div class="etiq-mgr-panel" id="tplMgrPanel">
+    <div class="etiq-mgr-header">Plantillas de correo</div>
+    <div style="font-size:13px;color:var(--muted);margin-bottom:12px;">Edita el texto de los correos automáticos. Usa variables entre llaves; se reemplazan solas al enviar. Si dejas una plantilla vacía, se usa el texto por defecto.</div>
+    <div id="tplMgrList"><div style="color:var(--subtle);font-size:13px;">Cargando...</div></div>
   </div>
   <div class="search-bar">
     <div class="search-input-wrap"><span class="search-icon">&#128269;</span><input type="text" id="searchQ" placeholder="Buscar por título, descripción, fuente..."></div>
@@ -501,9 +507,11 @@ function pintarSesion(){
   var btnAdd=document.getElementById("btnAgregar");
   var btnEtq=document.getElementById("btnEtiqMgr");
   var btnUsr=document.getElementById("btnUsrMgr");
+  var btnTpl=document.getElementById("btnTplMgr");
   if(btnAdd)btnAdd.style.display=esAdmin()?"":"none";
   if(btnEtq)btnEtq.style.display=esAdmin()?"":"none";
   if(btnUsr)btnUsr.style.display=esAdmin()?"":"none";
+  if(btnTpl)btnTpl.style.display=esAdmin()?"":"none";
   if(!cont)return;
   if(USER){
     var inicial=(USER.nombre||"U").charAt(0).toUpperCase();
@@ -593,6 +601,54 @@ function borrarUsuario(recordId){
     sc.src=SU+"?usr_eliminar="+encodeURIComponent(recordId)+"&callback="+cb+"&t="+Date.now();
     document.head.appendChild(sc);
   });
+}
+
+// ====== GESTIÓN DE PLANTILLAS (solo admin) ======
+var TPL_LISTA=[];
+var TPL_INFO={
+  riesgo:{nombre:"Aviso de Riesgo/Oportunidad (a usuarios)",vars:"{tipo} {nivel} {titulo} {descripcion} {enlace}"},
+  admin:{nombre:"Aviso a administradores",vars:"{accion} {detalle} {autor} {enlace}"},
+  confirmacion:{nombre:"Confirmación al usuario",vars:"{accion} {detalle} {enlace}"}
+};
+function cargarPlantillas(){
+  var cb="_tl"+Date.now();
+  window[cb]=function(res){
+    try{delete window[cb];}catch(e){}
+    TPL_LISTA=Array.isArray(res)?res:[];
+    pintarPlantillas();
+  };
+  var sc=document.createElement("script");
+  sc.src=SU+"?tpl_listar=1&callback="+cb+"&t="+Date.now();
+  document.head.appendChild(sc);
+}
+function pintarPlantillas(){
+  var cont=document.getElementById("tplMgrList");
+  if(!cont)return;
+  if(!TPL_LISTA.length){cont.innerHTML="<div style='color:var(--subtle);'>No se pudieron cargar.</div>";return;}
+  var html="";
+  TPL_LISTA.forEach(function(t){
+    var info=TPL_INFO[t.clave]||{nombre:t.clave,vars:""};
+    html+="<div style='border:1px solid var(--border);border-radius:10px;padding:14px;margin-bottom:12px;'>"+
+      "<div style='font-weight:700;font-size:15px;margin-bottom:4px;'>"+esc(info.nombre)+(t.personalizada?"":" <span style='font-size:11px;color:var(--subtle);font-weight:400;'>(por defecto)</span>")+"</div>"+
+      "<div style='font-size:12px;color:var(--blue);margin-bottom:8px;'>Variables disponibles: "+esc(info.vars)+"</div>"+
+      "<label style='font-size:12px;color:var(--muted);'>Asunto:</label>"+
+      "<input type='text' id='tpl-asunto-"+esc(t.clave)+"' value='"+esc(t.asunto)+"' style='width:100%;margin-bottom:8px;'>"+
+      "<label style='font-size:12px;color:var(--muted);'>Cuerpo del correo:</label>"+
+      "<textarea id='tpl-cuerpo-"+esc(t.clave)+"' style='width:100%;height:120px;font-family:monospace;font-size:13px;'>"+esc(t.cuerpo)+"</textarea>"+
+      "<div style='margin-top:8px;'><button class='com-send' onclick='guardarPlantilla(\""+esc(t.clave)+"\")'>Guardar plantilla</button></div>"+
+    "</div>";
+  });
+  cont.innerHTML=html;
+}
+function guardarPlantilla(clave){
+  var asunto=document.getElementById("tpl-asunto-"+clave).value;
+  var cuerpo=document.getElementById("tpl-cuerpo-"+clave).value;
+  var cb="_tg"+Date.now();
+  window[cb]=function(r){try{delete window[cb];}catch(e){}if(r&&r.ok){tst("Plantilla guardada");cargarPlantillas();}else tst("Error al guardar");};
+  var p={clave:clave,asunto:asunto,cuerpo:cuerpo};
+  var sc=document.createElement("script");
+  sc.src=SU+"?tpl_guardar="+encodeURIComponent(JSON.stringify(p))+"&callback="+cb+"&t="+Date.now();
+  document.head.appendChild(sc);
 }
 
 var REGIONES = [
@@ -1665,10 +1721,12 @@ function guardar(){
 function actualizar(){
   var d=recoger();if(!validar(d))return;
   var ro=recogerRO();
+  // Convertir la fecha del formulario (YYYY-MM-DD) al formato D/M/YYYY
+  var pfa=d.fec.split("-");var fsa=parseInt(pfa[2])+"/"+parseInt(pfa[1])+"/"+pfa[0];
   for(var i=0;i<NM.length;i++){
     if(String(NM[i].id)===String(EID)){
       NM[i].titulo=d.t;NM[i].rm=d.r;NM[i].estado=d.est;
-      NM[i].fecha=String(EFO).split(' ')[0];NM[i].hora=d.hora||'';
+      NM[i].fecha=fsa;NM[i].hora=d.hora||'';
       NM[i].region=d.region||'';
       NM[i].url=document.getElementById("f-url").value.trim();NM[i].video=document.getElementById("f-video").value.trim();NM[i].embed=document.getElementById("f-embed").value.trim();NM[i].desc=d.dsc;
       NM[i].riesgo=ro.riesgo;NM[i].tipo_ro=ro.tipo_ro;NM[i].probabilidad=ro.probabilidad;NM[i].impacto=ro.impacto;NM[i].indice_ro=ro.indice_ro;NM[i].nivel_ro=ro.nivel_ro;NM[i].heroTitle=d.t;
@@ -1705,6 +1763,11 @@ window.onload=function(){
   };
   document.getElementById("usrMgrAdd").onclick=agregarUsuario;
   document.getElementById("usrMgrEmail").addEventListener("keydown",function(e){if(e.key==="Enter")agregarUsuario();});
+  document.getElementById("btnTplMgr").onclick=function(){
+    var p=document.getElementById("tplMgrPanel");
+    p.classList.toggle("open");
+    if(p.classList.contains("open"))cargarPlantillas();
+  };
   document.getElementById("etiqMgrAdd").onclick=function(){
     var v=document.getElementById("etiqMgrInput").value.trim();
     if(!v){tst("Escribe un nombre de etiqueta");return;}
