@@ -1,11 +1,10 @@
 <!DOCTYPE html>
 <html lang="es">
 <head>
-<script src="https://accounts.google.com/gsi/client" async defer></script>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>VISOR — Facultad de Ingeniería URP</title>
 <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans:wght@300;400;500;600;700&display=swap" rel="stylesheet">
-<script src="https://accounts.google.com/gsi/client" async defer></script>
 <script src="https://accounts.google.com/gsi/client" async defer></script>
 <style>
 :root{--primary:#002D54;--green:#059669;--green-light:#ECFDF5;--blue:#0284c7;--blue-light:#EFF6FF;--accent:#E24B4A;--accent-light:#FFF1F2;--accent-tag:#FEE2E2;--accent-text:#A32D2D;--warning:#D97706;--warning-light:#FEF9C3;--warning-text:#92400E;--border:#E2E8F0;--bg:#F1F5F9;--surface:#F8FAFC;--text:#1E293B;--muted:#64748B;--subtle:#94A3B8;--gold:#F59E0B;--gold-bg:#FFFBEB;--gold-border:#FDE68A;--riesgo-bajo:#16A34A;--riesgo-bajo-bg:#DCFCE7;--riesgo-inter:#D97706;--riesgo-inter-bg:#FEF9C3;--riesgo-inm:#EA580C;--riesgo-inm-bg:#FFF7ED;--riesgo-crit:#DC2626;--riesgo-crit-bg:#FEE2E2;}
@@ -746,6 +745,20 @@ function esImagen(url){
 }
 // Valida que el código embebido sea un iframe de un servicio confiable.
 // Devuelve el HTML seguro a mostrar, o "" si no es válido/confiable.
+// Reduce el código incrustado a un iframe mínimo (solo src + medidas),
+// para que quepa al guardar (evita el límite de longitud de la URL).
+function compactarEmbed(code){
+  if(!code||!code.trim())return"";
+  var c=code.trim();
+  var m=c.match(/<iframe[^>]*\ssrc=["']([^"']+)["'][^>]*>/i);
+  if(!m)return c.substring(0,500); // si no hay iframe, guardar recortado por seguridad
+  var src=m[1];
+  var wM=c.match(/width=["']?(\d+)/i); var hM=c.match(/height=["']?(\d+)/i);
+  var w=wM?wM[1]:"800"; var h=hM?hM[1]:"450";
+  // iframe mínimo: solo lo necesario para reconstruir la vista
+  return '<iframe src="'+src+'" width="'+w+'" height="'+h+'"></iframe>';
+}
+
 function embedSeguro(code){
   if(!code||!code.trim())return"";
   var c=code.trim();
@@ -1718,7 +1731,7 @@ function guardar(){
   var ro=recogerRO();
   var n={id:'N'+Date.now(),titulo:d.t,rm:d.r,estado:d.est,
     riesgo:ro.riesgo,tipo_ro:ro.tipo_ro,probabilidad:ro.probabilidad,impacto:ro.impacto,indice_ro:ro.indice_ro,nivel_ro:ro.nivel_ro,desc:d.dsc,
-    url:document.getElementById("f-url").value.trim(),video:document.getElementById("f-video").value.trim(),embed:document.getElementById("f-embed").value.trim(),fecha:fs,hora:d.hora||"",
+    url:document.getElementById("f-url").value.trim(),video:document.getElementById("f-video").value.trim(),embed:compactarEmbed(document.getElementById("f-embed").value.trim()),fecha:fs,hora:d.hora||"",
     region:d.region||"",
     arch:false,destacado:false,heroTitle:d.t,heroSub:'',
     etiquetas:FE.slice(),disposiciones:d.di,relacionadas:[],
@@ -1740,7 +1753,7 @@ function actualizar(){
       NM[i].titulo=d.t;NM[i].rm=d.r;NM[i].estado=d.est;
       NM[i].fecha=fsa;NM[i].hora=d.hora||'';
       NM[i].region=d.region||'';
-      NM[i].url=document.getElementById("f-url").value.trim();NM[i].video=document.getElementById("f-video").value.trim();NM[i].embed=document.getElementById("f-embed").value.trim();NM[i].desc=d.dsc;
+      NM[i].url=document.getElementById("f-url").value.trim();NM[i].video=document.getElementById("f-video").value.trim();NM[i].embed=compactarEmbed(document.getElementById("f-embed").value.trim());NM[i].desc=d.dsc;
       NM[i].riesgo=ro.riesgo;NM[i].tipo_ro=ro.tipo_ro;NM[i].probabilidad=ro.probabilidad;NM[i].impacto=ro.impacto;NM[i].indice_ro=ro.indice_ro;NM[i].nivel_ro=ro.nivel_ro;NM[i].heroTitle=d.t;
       NM[i].etiquetas=FE.slice();NM[i].disposiciones=d.di;NM[i].archivos=FA.slice();
       NM[i].padreId=PADRE_ID||'';
