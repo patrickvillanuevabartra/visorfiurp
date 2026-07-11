@@ -751,11 +751,16 @@ function compactarEmbed(code){
   if(!code||!code.trim())return"";
   var c=code.trim();
   var m=c.match(/<iframe[^>]*\ssrc=["']([^"']+)["'][^>]*>/i);
-  if(!m)return c.substring(0,500); // si no hay iframe, guardar recortado por seguridad
+  if(!m)return c.substring(0,500);
   var src=m[1];
+  // 1) Intentar capturar la proporción real (padding-top de Canva, ej: 49.7072%)
+  var padM=c.match(/padding-top:\s*([\d.]+)%/i);
+  if(padM){
+    return '<iframe src="'+src+'" data-ratio="'+padM[1]+'"></iframe>';
+  }
+  // 2) Si no, usar width/height del iframe
   var wM=c.match(/width=["']?(\d+)/i); var hM=c.match(/height=["']?(\d+)/i);
   var w=wM?wM[1]:"800"; var h=hM?hM[1]:"450";
-  // iframe mínimo: solo lo necesario para reconstruir la vista
   return '<iframe src="'+src+'" width="'+w+'" height="'+h+'"></iframe>';
 }
 
@@ -780,11 +785,18 @@ function embedSeguro(code){
   try{ host=src.replace(/^https?:\/\//,"").split("/")[0].toLowerCase().split("?")[0]; }catch(e){return"";}
   var ok=permitidos.some(function(d){return host===d||host.endsWith("."+d);});
   if(!ok)return"";
-  // Reconstruir un iframe limpio (solo atributos seguros)
-  var wM=c.match(/width=["']?(\d+)/i); var hM=c.match(/height=["']?(\d+)/i);
-  var ratio=(wM&&hM)?(parseInt(hM[1])/parseInt(wM[1])*100):56.25;
+  // Determinar la proporción: 1) data-ratio (proporción real de Canva), 2) width/height, 3) 16:9
+  var ratio;
+  var rM=c.match(/data-ratio=["']?([\d.]+)/i);
+  var padM=c.match(/padding-top:\s*([\d.]+)%/i);
+  if(rM){ ratio=parseFloat(rM[1]); }
+  else if(padM){ ratio=parseFloat(padM[1]); }
+  else {
+    var wM=c.match(/width=["']?(\d+)/i); var hM=c.match(/height=["']?(\d+)/i);
+    ratio=(wM&&hM)?(parseInt(hM[1])/parseInt(wM[1])*100):56.25;
+  }
   if(!isFinite(ratio)||ratio<=0)ratio=56.25;
-  return "<div class='embed-wrap' style='padding-bottom:"+ratio.toFixed(2)+"%;'>"+
+  return "<div class='embed-wrap' style='padding-bottom:"+ratio.toFixed(4)+"%;background:transparent;'>"+
          "<iframe src='"+esc(src)+"' frameborder='0' allowfullscreen loading='lazy' "+
          "allow='fullscreen' referrerpolicy='no-referrer'></iframe></div>";
 }
