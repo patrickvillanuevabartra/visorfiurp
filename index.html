@@ -1259,7 +1259,7 @@ function bldDetail(n){
   var archFranja = archH ? "<div class='arch-franja'>"+archH+"</div>" : "";
   // Diseño incrustado (Canva, YouTube, etc.) validado por seguridad
   var embHtml = embedSeguro(n.embed||"");
-  var embFranja = embHtml ? "<div class='embed-section'><div class='embed-section-title'>Diseño / contenido incrustado</div>"+embHtml+"</div>" : "";
+  var embFranja = embHtml ? "<div class='embed-section'>"+embHtml+"</div>" : "";
   return embFranja+
     archFranja+
     "<div class='detail-body' style='"+bodyStyle+"'>"+bodyInner+"</div>"+
