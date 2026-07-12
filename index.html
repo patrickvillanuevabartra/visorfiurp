@@ -9,6 +9,8 @@
 <style>
 :root{--primary:#002D54;--green:#059669;--green-light:#ECFDF5;--blue:#0284c7;--blue-light:#EFF6FF;--accent:#E24B4A;--accent-light:#FFF1F2;--accent-tag:#FEE2E2;--accent-text:#A32D2D;--warning:#D97706;--warning-light:#FEF9C3;--warning-text:#92400E;--border:#E2E8F0;--bg:#F1F5F9;--surface:#F8FAFC;--text:#1E293B;--muted:#64748B;--subtle:#94A3B8;--gold:#F59E0B;--gold-bg:#FFFBEB;--gold-border:#FDE68A;--riesgo-bajo:#16A34A;--riesgo-bajo-bg:#DCFCE7;--riesgo-inter:#D97706;--riesgo-inter-bg:#FEF9C3;--riesgo-inm:#EA580C;--riesgo-inm-bg:#FFF7ED;--riesgo-crit:#DC2626;--riesgo-crit-bg:#FEE2E2;}
 *{box-sizing:border-box;margin:0;padding:0;}
+html,body{max-width:100%;overflow-x:hidden;}
+img,iframe{max-width:100%;}
 body{background:#CBD5E1;padding:24px 16px;font-family:"IBM Plex Sans",sans-serif;color:var(--text);font-size:18px;}
 .portal{background:white;border-radius:16px;box-shadow:0 20px 48px -8px rgba(0,0,0,0.22);overflow:hidden;max-width:1100px;margin:0 auto;}
 .portal-inner{padding:28px 32px;}
@@ -293,7 +295,68 @@ body{background:#CBD5E1;padding:24px 16px;font-family:"IBM Plex Sans",sans-serif
 .confirm-btns{display:flex;gap:11px;justify-content:center;}
 .confirm-ok{padding:11px 28px;border-radius:8px;background:#FEE2E2;border:1px solid #FECDD3;color:#DC2626;font-size:16px;font-weight:700;cursor:pointer;font-family:"IBM Plex Sans",sans-serif;}
 .confirm-cancel{padding:11px 28px;border-radius:8px;background:var(--surface);border:1px solid var(--border);color:var(--muted);font-size:16px;cursor:pointer;font-family:"IBM Plex Sans",sans-serif;}
-@media(max-width:700px){.detail-body{grid-template-columns:1fr;}.detail-left{border-right:none;border-bottom:1px solid var(--border);}.row2{grid-template-columns:1fr;}.row3{grid-template-columns:1fr;}.portal-inner{padding:18px;}.adv-row{flex-direction:column;}.norma.indexada{margin-left:16px;}.norma.indexada-nivel-2{margin-left:32px;}.norma.indexada-nivel-3{margin-left:48px;}}
+/* ===== TABLET (hasta 900px) ===== */
+@media(max-width:900px){
+  .portal-inner{padding:20px;}
+  .portal-title{font-size:22px;}
+  .portal-sub{font-size:15px;}
+}
+/* ===== MÓVIL Y TABLET PEQUEÑA (hasta 700px) ===== */
+@media(max-width:700px){
+  body{padding:8px 6px;}
+  .detail-body{grid-template-columns:1fr;}
+  .detail-left{border-right:none;border-bottom:1px solid var(--border);}
+  .row2{grid-template-columns:1fr;}
+  .row3{grid-template-columns:1fr;}
+  .portal-inner{padding:12px;}
+  .adv-row{flex-direction:column;}
+  .norma.indexada{margin-left:16px;}
+  .norma.indexada-nivel-2{margin-left:32px;}
+  .norma.indexada-nivel-3{margin-left:48px;}
+  /* Top bar: apilar título y sesión */
+  .top-bar{flex-direction:column;align-items:stretch;gap:12px;}
+  .bell-wrap{display:none;}
+  .portal-title{font-size:19px;line-height:1.25;}
+  .portal-sub{font-size:14px;}
+  #sesion-box{width:100%;}
+  #sesion-box>div{justify-content:flex-start !important;}
+  /* Botones de acción a ancho completo */
+  .btn-add{width:100%;justify-content:center;font-size:15px;padding:12px 16px;}
+  .etiq-mgr-toggle{width:100%;justify-content:center;margin-bottom:6px;}
+  /* Búsqueda y filtros */
+  .search-bar{flex-direction:column;align-items:stretch;}
+  .search-input-wrap{width:100%;}
+  .search-input-wrap{min-width:0;width:100%;}
+  .confirm-box{width:90vw;max-width:380px;padding:22px;}
+  .af-group{min-width:0 !important;}
+  .fbtn{font-size:13px;padding:8px 13px;}
+  .filters{gap:6px;}
+  /* Modal a pantalla casi completa */
+  .modal{width:96vw;max-width:96vw;margin:2vh auto;max-height:94vh;overflow-y:auto;padding:18px;}
+  .modal-title{font-size:19px;}
+  .modal-sub{font-size:15px;}
+  .fg input,.fg textarea,.fg select{font-size:16px;} /* 16px evita zoom en iOS */
+  /* Cards */
+  .norma-topbar{padding:14px 15px 8px;flex-wrap:wrap;}
+  .norma-actions{flex-wrap:wrap;gap:8px;}
+  /* Comentarios */
+  .com-item{padding:10px;}
+  .com-actions{flex-wrap:wrap;gap:8px;}
+  .com-form.reply-form{margin-left:12px;}
+  /* Paneles de gestión */
+  .etiq-mgr-new{flex-direction:column;align-items:stretch;}
+  .etiq-mgr-new input,.etiq-mgr-new button{width:100%;}
+  /* Imágenes y embeds */
+  .arch-franja,.embed-section{padding:12px;}
+  /* Tablas que puedan desbordar */
+  table{font-size:13px;}
+}
+/* ===== MÓVIL PEQUEÑO (hasta 420px) ===== */
+@media(max-width:420px){
+  .portal-title{font-size:17px;}
+  .fbtn{font-size:12px;padding:7px 11px;}
+  .badge{font-size:11px;}
+}
 </style>
 </head>
 <body>
@@ -449,7 +512,10 @@ body{background:#CBD5E1;padding:24px 16px;font-family:"IBM Plex Sans",sans-serif
         <div class="fg"><label>Impacto</label><select id="f-imp"></select></div>
       </div>
       <div id="ro-resultado" style="display:none;padding:12px 15px;border-radius:8px;margin-bottom:14px;border-left:4px solid;font-size:15px;">
-        <strong>Índice:</strong> <span id="ro-indice">0</span> &nbsp;·&nbsp; <strong>Nivel:</strong> <span id="ro-nivel">—</span>
+        <div><strong>Índice:</strong> <span id="ro-indice">0</span> &nbsp;·&nbsp; <strong>Nivel:</strong> <span id="ro-nivel">—</span></div>
+        <div id="ro-descprob" style="font-size:13px;margin-top:6px;color:#475569;"></div>
+        <div id="ro-descimp" style="font-size:13px;color:#475569;"></div>
+        <div id="ro-accion" style="font-size:13px;margin-top:8px;padding-top:8px;border-top:1px solid rgba(0,0,0,0.08);font-weight:600;"></div>
       </div>
     </div>
     <div class="fg"><label id="lbl-conflicto">Descripción del riesgo / oportunidad</label><textarea id="f-conflicto" style="height:80px;" placeholder="Describe el riesgo u oportunidad..."></textarea></div>
@@ -676,9 +742,33 @@ function nivelRiesgoDe(idx){ if(!idx)return ""; if(idx>=13)return"critico"; if(i
 // Calcula el nivel de OPORTUNIDAD según el índice (P×I, máx 12).
 function nivelOportDe(idx){ if(!idx)return ""; if(idx>=10)return"muyalta"; if(idx>=7)return"alta"; if(idx>=4)return"media"; return"baja"; }
 // Etiquetas de probabilidad e impacto (para los desplegables)
-var PROB_OPTS = [{v:1,t:"1 - Raro"},{v:2,t:"2 - Improbable"},{v:3,t:"3 - Probable"},{v:4,t:"4 - Casi seguro"}];
-var IMP_RIESGO_OPTS = [{v:1,t:"1 - Leve"},{v:2,t:"2 - Moderado"},{v:3,t:"3 - Mayor"},{v:4,t:"4 - Catastrófico"}];
+var PROB_OPTS = [{v:1,t:"1 - Muy raro"},{v:2,t:"2 - Ocasionalmente"},{v:3,t:"3 - Frecuente"},{v:4,t:"4 - Muy frecuente"}];
+var IMP_RIESGO_OPTS = [{v:1,t:"1 - Muy bajo"},{v:2,t:"2 - Bajo"},{v:3,t:"3 - Moderado"},{v:4,t:"4 - Alto"}];
 var IMP_OPORT_OPTS = [{v:1,t:"1 - Bajo"},{v:2,t:"2 - Moderado"},{v:3,t:"3 - Alto"}];
+
+// Descripciones de probabilidad e impacto (metodología SGC ISO 21001)
+var DESC_PROB = {
+  1:"Ocasiones excepcionales (no hay estadísticas)",
+  2:"En algún momento (al menos una vez al año)",
+  3:"En algún momento (al menos una vez cada 6 meses)",
+  4:"En la mayoría de las circunstancias (al menos una vez cada tres meses)"
+};
+var DESC_IMP_RIESGO = {1:"Consecuencias mínimas",2:"Bajo impacto o efecto",3:"Medianas consecuencias o efecto",4:"Altas consecuencias o efectos"};
+var DESC_IMP_OPORT  = {1:"Bajo impacto o efecto",2:"Medianas consecuencias o efecto",3:"Altas consecuencias o efectos"};
+
+// Acción recomendada por nivel (criterio SGC ISO 21001)
+var ACCION_RIESGO = {
+  bajo:"Riesgo bajo. El riesgo puede o no establecer tratamiento o acción posterior a la evaluación (a decisión de la organización).",
+  intermedio:"Riesgo medio. El riesgo puede o no establecer tratamiento o acción posterior a la evaluación (a decisión de la organización).",
+  inminente:"Riesgo alto. Reducir el nivel de riesgo mediante la implementación de acciones adicionales a los controles existentes, de manera tal que el riesgo se pueda reevaluar como aceptable.",
+  critico:"Riesgo intolerable. Se deben tomar acciones inmediatamente para reducir la probabilidad de ocurrencia."
+};
+var ACCION_OPORT = {
+  baja:"Oportunidad baja. Registrar y monitorear; su aprovechamiento queda a decisión de la organización.",
+  media:"Oportunidad media. A evaluar; puede o no establecerse tratamiento o acción posterior a la evaluación (a decisión de la organización).",
+  alta:"Oportunidad alta. Se recomienda planificar acciones para aprovecharla e incorporarla a los objetivos del proceso.",
+  muyalta:"Oportunidad muy alta. Se deben tomar acciones inmediatas para asegurar su aprovechamiento."
+};
 var NM=[],FL="todas",EX={},HX={},FC=[],FE=[],FA=[],PCB=null,EID=null,EFO=null,EFI=null,AO=false,RIESGO_ORIGINAL=null,PADRE_ID=null;
 var ETIQ_EXTRA=[];
 
@@ -1228,6 +1318,7 @@ function bldDetail(n){
       var fHo="";var fso=rd.focos||[];
       for(var jo=0;jo<fso.length;jo++)fHo+="<span class='hotspot'>"+esc(fso[jo])+"</span>";
       if(oi)rH+="<div class='risk-row' style='background:"+oi.bgRow+";border-color:"+oi.bRow+";'><div class='pulse' style='background:"+oi.dot+";'></div><span style='font-size:17px;font-weight:700;color:"+oi.dot+";'>Nivel: "+oi.label+" (índice "+n.indice_ro+")</span></div>";
+      if(ACCION_OPORT[onk])rH+="<div class='r-block' style='background:#EFF6FF;border-left:3px solid #2563EB;'><span class='r-title' style='color:#1D4ED8;'>Valoración del nivel</span>"+esc(ACCION_OPORT[onk])+"</div>";
       if(rd.conflicto)rH+="<div class='r-block' style='background:#EFF6FF;border-left:3px solid #2563EB;'><span class='r-title' style='color:#1D4ED8;'>Descripción de la oportunidad</span>"+esc(rd.conflicto)+"</div>";
       if(fso.length)rH+="<div class='r-block' style='background:#EFF6FF;border-left:3px solid #2563EB;'><span class='r-title' style='color:#1D4ED8;'>Actores</span><div style='margin-top:5px;'>"+fHo+"</div></div>";
       if(rd.acrecom)rH+="<div class='r-block r-amber'><span class='r-title'>Acción recomendada</span>"+esc(rd.acrecom)+"</div>";
@@ -1235,6 +1326,8 @@ function bldDetail(n){
       var fH="";var fs=rd.focos||[];
       for(var j=0;j<fs.length;j++)fH+="<span class='hotspot'>"+esc(fs[j])+"</span>";
       rH+="<div class='risk-row' style='background:"+ri.bgRow+";border-color:"+ri.bRow+";'><div class='pulse' style='background:"+ri.dot+";'></div><span style='font-size:17px;font-weight:700;color:"+ri.dot+";'>Nivel: "+ri.label+(n.indice_ro?" (índice "+n.indice_ro+")":"")+"</span></div>";
+      var _nk=nivelRiesgoDe(n.indice_ro||0);
+      if(ACCION_RIESGO[_nk])rH+="<div class='r-block r-amber'><span class='r-title'>Valoración del nivel</span>"+esc(ACCION_RIESGO[_nk])+"</div>";
       if(rd.conflicto)rH+="<div class='r-block r-red'><span class='r-title'>Descripcion del riesgo</span>"+esc(rd.conflicto)+"</div>";
       if(fs.length)rH+="<div class='r-block r-red'><span class='r-title'>Actores</span><div style='margin-top:5px;'>"+fH+"</div></div>";
       if(rd.acrecom)rH+="<div class='r-block r-amber'><span class='r-title'>Acción recomendada</span>"+esc(rd.acrecom)+"</div>";
@@ -1626,11 +1719,16 @@ function calcularRO(){
   var box=document.getElementById("ro-resultado");
   if(!p||!i){box.style.display="none";return;}
   var idx=p*i;
-  var nivelKey,info;
-  if(tipo==="riesgo"){nivelKey=nivelRiesgoDe(idx);info=RI[nivelKey];}
-  else{nivelKey=nivelOportDe(idx);info=OPP[nivelKey];}
+  var nivelKey,info,accion;
+  var esOp=(tipo==="oportunidad");
+  if(tipo==="riesgo"){nivelKey=nivelRiesgoDe(idx);info=RI[nivelKey];accion=ACCION_RIESGO[nivelKey]||"";}
+  else{nivelKey=nivelOportDe(idx);info=OPP[nivelKey];accion=ACCION_OPORT[nivelKey]||"";}
   document.getElementById("ro-indice").textContent=idx;
   document.getElementById("ro-nivel").textContent=info?info.label:"—";
+  document.getElementById("ro-descprob").textContent="Probabilidad: "+(DESC_PROB[p]||"");
+  var dimp=esOp?(DESC_IMP_OPORT[i]||""):(DESC_IMP_RIESGO[i]||"");
+  document.getElementById("ro-descimp").textContent="Impacto: "+dimp;
+  document.getElementById("ro-accion").textContent=accion;
   box.style.display="block";
   box.style.background=info?info.bgRow:"#F1F5F9";
   box.style.borderLeftColor=info?info.dot:"#94A3B8";
