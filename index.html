@@ -474,6 +474,7 @@ body{background:#CBD5E1;padding:24px 16px;font-family:"IBM Plex Sans",sans-serif
     <div class="fg"><label>URL</label><input type="text" id="f-url" placeholder="https://..."></div>
     <div class="fg"><label>Video <span style="font-weight:400;color:var(--muted);font-size:12px;">(opcional)</span></label><input type="text" id="f-video" placeholder="Link de YouTube, Facebook, etc."></div>
     <div class="fg"><label>Diseño incrustado <span style="font-weight:400;color:var(--muted);font-size:12px;">(opcional)</span></label><textarea id="f-embed" style="height:80px;font-family:monospace;font-size:13px;" placeholder="Pega aquí el código para insertar de Canva, YouTube, etc. (el que empieza con &lt;iframe...)"></textarea><div class="hint">En Canva: Compartir → Más → Insertar → copia el código y pégalo aquí.</div></div>
+    <div class="fg"><label>Alto del diseño incrustado <span style="font-weight:400;color:var(--muted);font-size:12px;">(opcional, si aparecen franjas negras)</span></label><input type="text" id="f-embed-ratio" placeholder="Ej: 130 (deja vacío para automático)"><div class="hint">Es un porcentaje del ancho. Si el diseño sale con franjas negras arriba/abajo, prueba subir o bajar este número (ej. 100, 130, 150) hasta que calce.</div></div>
     <div class="fg"><label>Descripción <span class="req">*</span></label><textarea id="f-desc" style="height:80px;" placeholder="Resumen general..."></textarea></div>
     <div class="fg">
       <label>Etiquetas personalizadas</label>
@@ -844,18 +845,23 @@ function esImagen(url){
 // Devuelve el HTML seguro a mostrar, o "" si no es válido/confiable.
 // Reduce el código incrustado a un iframe mínimo (solo src + medidas),
 // para que quepa al guardar (evita el límite de longitud de la URL).
-function compactarEmbed(code){
+function compactarEmbed(code,ratioManual){
   if(!code||!code.trim())return"";
   var c=code.trim();
   var m=c.match(/<iframe[^>]*\ssrc=["']([^"']+)["'][^>]*>/i);
   if(!m)return c.substring(0,500);
   var src=m[1];
-  // 1) Intentar capturar la proporción real (padding-top de Canva, ej: 49.7072%)
+  // Prioridad 1: ratio manual escrito por el usuario
+  var rM=parseFloat(ratioManual);
+  if(rM&&isFinite(rM)&&rM>0){
+    return '<iframe src="'+src+'" data-ratio="'+rM+'"></iframe>';
+  }
+  // Prioridad 2: proporción real del código de Canva (padding-top)
   var padM=c.match(/padding-top:\s*([\d.]+)%/i);
   if(padM){
     return '<iframe src="'+src+'" data-ratio="'+padM[1]+'"></iframe>';
   }
-  // 2) Si no, usar width/height del iframe
+  // Prioridad 3: width/height del iframe
   var wM=c.match(/width=["']?(\d+)/i); var hM=c.match(/height=["']?(\d+)/i);
   var w=wM?wM[1]:"800"; var h=hM?hM[1]:"450";
   return '<iframe src="'+src+'" width="'+w+'" height="'+h+'"></iframe>';
@@ -1763,7 +1769,7 @@ function abrirModal(){
   document.getElementById("linksPreviewList").innerHTML="";
   document.getElementById("f-link-url").value="";
   document.getElementById("f-link-nombre").value="";
-  ["f-tit","f-rm","f-desc","f-conflicto","f-acrecom","f-url","f-video","f-embed"].forEach(function(fid){document.getElementById(fid).value="";});
+  ["f-tit","f-rm","f-desc","f-conflicto","f-acrecom","f-url","f-video","f-embed","f-embed-ratio"].forEach(function(fid){document.getElementById(fid).value="";});
   document.getElementById("f-tipo-ro").value="ninguno";
   onTipoRO();
   document.getElementById("f-est").value="";
@@ -1793,6 +1799,10 @@ function abrirEditar(idx){
   document.getElementById("f-url").value=n.url||"";
   document.getElementById("f-video").value=n.video||"";
   document.getElementById("f-embed").value=n.embed||"";
+  // Extraer el ratio guardado (data-ratio) al campo manual, si existe
+  var rGuardado="";
+  try{var rm=(n.embed||"").match(/data-ratio=["']?([\d.]+)/i);if(rm)rGuardado=rm[1];}catch(e){}
+  document.getElementById("f-embed-ratio").value=rGuardado;
   document.getElementById("f-desc").value=n.desc||"";
   // Cargar el flujo riesgo/oportunidad
   var tipoRO=n.tipo_ro||(n.riesgo&&n.riesgo!=="ninguno"?"riesgo":"ninguno");
@@ -1852,7 +1862,7 @@ function guardar(){
   var ro=recogerRO();
   var n={id:'N'+Date.now(),titulo:d.t,rm:d.r,estado:d.est,
     riesgo:ro.riesgo,tipo_ro:ro.tipo_ro,probabilidad:ro.probabilidad,impacto:ro.impacto,indice_ro:ro.indice_ro,nivel_ro:ro.nivel_ro,desc:d.dsc,
-    url:document.getElementById("f-url").value.trim(),video:document.getElementById("f-video").value.trim(),embed:compactarEmbed(document.getElementById("f-embed").value.trim()),fecha:fs,hora:d.hora||"",
+    url:document.getElementById("f-url").value.trim(),video:document.getElementById("f-video").value.trim(),embed:compactarEmbed(document.getElementById("f-embed").value.trim(),document.getElementById("f-embed-ratio").value.trim()),fecha:fs,hora:d.hora||"",
     region:d.region||"",
     arch:false,destacado:false,heroTitle:d.t,heroSub:'',
     etiquetas:FE.slice(),disposiciones:d.di,relacionadas:[],
@@ -1874,7 +1884,7 @@ function actualizar(){
       NM[i].titulo=d.t;NM[i].rm=d.r;NM[i].estado=d.est;
       NM[i].fecha=fsa;NM[i].hora=d.hora||'';
       NM[i].region=d.region||'';
-      NM[i].url=document.getElementById("f-url").value.trim();NM[i].video=document.getElementById("f-video").value.trim();NM[i].embed=compactarEmbed(document.getElementById("f-embed").value.trim());NM[i].desc=d.dsc;
+      NM[i].url=document.getElementById("f-url").value.trim();NM[i].video=document.getElementById("f-video").value.trim();NM[i].embed=compactarEmbed(document.getElementById("f-embed").value.trim(),document.getElementById("f-embed-ratio").value.trim());NM[i].desc=d.dsc;
       NM[i].riesgo=ro.riesgo;NM[i].tipo_ro=ro.tipo_ro;NM[i].probabilidad=ro.probabilidad;NM[i].impacto=ro.impacto;NM[i].indice_ro=ro.indice_ro;NM[i].nivel_ro=ro.nivel_ro;NM[i].heroTitle=d.t;
       NM[i].etiquetas=FE.slice();NM[i].disposiciones=d.di;NM[i].archivos=FA.slice();
       NM[i].padreId=PADRE_ID||'';
