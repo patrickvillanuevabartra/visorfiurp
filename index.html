@@ -825,7 +825,14 @@ function buildNormaIcon(n, nivel){
   return "<div class='norma-icon"+sm+"'>"+ico+"</div>";
 }
 
-function mimeIcon(url){return"&#128206;";}
+function mimeIcon(url,nombre){
+  var s=((nombre||"")+" "+(url||"")).toLowerCase();
+  if(/\.pdf/.test(s))return"&#128196;";      // 📄 PDF
+  if(/\.(doc|docx)/.test(s))return"&#128209;"; // 📑 Word
+  if(/\.(xls|xlsx|csv)/.test(s))return"&#128202;"; // 📊 Excel
+  if(/\.(ppt|pptx)/.test(s))return"&#128206;"; // 📎 PowerPoint
+  return"&#128206;"; // 📎 genérico
+}
 function esImagen(url){
   if(!url)return false;
   if(url.match(/\.(jpg|jpeg|png|gif|webp)(\?|$)/i))return true;
@@ -1290,12 +1297,16 @@ function bldDetail(n){
         archH+="<div class='arch-link-row' style='display:none;'><div style='display:flex;align-items:center;gap:8px;'><span class='arch-link-icon'>&#128206;</span><span class='arch-link-name'>"+esc(a.nombre)+"</span></div><a class='arch-btn arch-btn-view' href='"+esc(a.viewUrl)+"' target='_blank' style='align-self:flex-start;'>Abrir</a></div>";
       } else {
         var th=driveThumb(a.viewUrl);
-        if(th){
+        // Solo mostrar miniatura de Drive si el archivo parece ser una IMAGEN
+        // (por su nombre). Los PDF/documentos NO se muestran como imagen (salían distorsionados).
+        var nombreEsImagen=/\.(jpg|jpeg|png|gif|webp)$/i.test(a.nombre||"");
+        if(th&&nombreEsImagen){
           // Imagen de Google Drive: solo miniatura (Drive no permite verla completa)
           archH+="<a href='"+esc(a.viewUrl)+"' target='_blank'><img class='arch-img-preview' src='"+esc(th)+"' alt='"+esc(a.nombre)+"' onerror='this.style.display=\"none\"'></a>";
           archH+="<div class='arch-link-row'><div style='display:flex;align-items:center;gap:8px;'><span class='arch-link-icon'>&#128206;</span><span class='arch-link-name'>"+esc(a.nombre)+"</span></div><a class='arch-btn arch-btn-view' href='"+esc(a.viewUrl)+"' target='_blank' style='align-self:flex-start;'>Abrir</a></div>";
         } else {
-          archH+="<div class='arch-link-row'><div style='display:flex;align-items:center;gap:8px;'><span class='arch-link-icon'>"+mimeIcon(a.viewUrl)+"</span><span class='arch-link-name'>"+esc(a.nombre)+"</span></div><a class='arch-btn arch-btn-view' href='"+esc(a.viewUrl)+"' target='_blank' style='align-self:flex-start;'>Abrir</a></div>";
+          // Documento (PDF, Word, Excel, etc.): solo recuadro limpio con botón Abrir
+          archH+="<div class='arch-link-row'><div style='display:flex;align-items:center;gap:8px;'><span class='arch-link-icon'>"+mimeIcon(a.viewUrl,a.nombre)+"</span><span class='arch-link-name'>"+esc(a.nombre)+"</span></div><a class='arch-btn arch-btn-view' href='"+esc(a.viewUrl)+"' target='_blank' style='align-self:flex-start;'>Abrir</a></div>";
         }
       }
     });
