@@ -867,6 +867,26 @@ function soloTexto(t){
   tmp.innerHTML=textoARico(t);
   return (tmp.textContent||tmp.innerText||"").replace(/\s+/g," ").trim();
 }
+// Convierte contenido enriquecido (HTML) a texto formateado para WhatsApp.
+function richAWhatsApp(t){
+  if(!t)return"";
+  var h=textoARico(t);
+  // Negrita -> *texto* (formato de WhatsApp)
+  h=h.replace(/<(b|strong)>/gi,"*").replace(/<\/(b|strong)>/gi,"*");
+  // Cursiva -> _texto_
+  h=h.replace(/<(i|em)>/gi,"_").replace(/<\/(i|em)>/gi,"_");
+  // Elementos de lista -> viñeta con salto de línea
+  h=h.replace(/<li[^>]*>/gi,"\n• ").replace(/<\/li>/gi,"");
+  // Saltos de bloque -> salto de línea
+  h=h.replace(/<\/(p|div|ul|ol|h3|h4)>/gi,"\n").replace(/<br\s*\/?>/gi,"\n");
+  // Quitar cualquier etiqueta restante
+  h=h.replace(/<[^>]+>/g,"");
+  // Decodificar entidades comunes
+  var tmp=document.createElement("textarea");tmp.innerHTML=h;h=tmp.value;
+  // Limpiar espacios y saltos de línea excesivos
+  h=h.replace(/[ \t]+/g," ").replace(/\n{3,}/g,"\n\n").replace(/^\n+|\n+$/g,"").trim();
+  return h;
+}
 
 // Crea un editor enriquecido dentro del contenedor dado, con el HTML inicial.
 // Devuelve el div editable (su .innerHTML es el contenido).
@@ -1118,27 +1138,27 @@ function waUrl(n){
   msg+='_Vigilancia de Informacion de Sectores, Opinion y Regulaciones_\n\n';
   msg+='*'+n.titulo+'*\n\n';
   if(n.rm)msg+='*Fuente:* '+n.rm+'\n';
-  msg+='*Fecha:* '+fecha+(hora?' - '+hora:'')+'\n';
+  msg+='*Fecha de publicación:* '+fecha+(hora?' - '+hora:'')+'\n';
   if(n.region)msg+='*Region:* '+n.region+'\n';
   if(n.estado&&n.estado!==''){
     var estados={consulta:'En consulta publica',vigente:'Vigente',derogada:'Derogada'};
     if(estados[n.estado])msg+='*Estado:* '+estados[n.estado]+'\n';
   }
   msg+='\n';
-  if(n.desc){msg+='*Descripción*\n';msg+=n.desc+'\n\n';}
+  if(n.desc){msg+='*Descripción*\n';msg+=richAWhatsApp(n.desc)+'\n\n';}
   var ds=n.disposiciones||[];
   if(ds.length){
     msg+='*Disposiciones principales*\n';
-    for(var i=0;i<ds.length;i++){msg+=(i+1)+'. *'+ds[i].t+'*';if(ds[i].d)msg+='\n   _'+ds[i].d+'_';msg+='\n';}
+    for(var i=0;i<ds.length;i++){msg+=(i+1)+'. *'+ds[i].t+'*';if(ds[i].d)msg+='\n'+richAWhatsApp(ds[i].d);msg+='\n';}
     msg+='\n';
   }
   var rd=n.riesgoDetalle||{};
-  if(rd.conflicto){msg+='*Descripción del riesgo*\n'+rd.conflicto+'\n\n';}
+  if(rd.conflicto){msg+='*Descripción del riesgo*\n'+richAWhatsApp(rd.conflicto)+'\n\n';}
   if(n.riesgo&&riLabels[n.riesgo]){
     msg+='*Análisis FI-URP*\n';
     msg+='Nivel: '+riLabels[n.riesgo]+'\n';
     if(rd.focos&&rd.focos.length)msg+='Actores: _'+rd.focos.join(' / ')+'_\n';
-    if(rd.acrecom)msg+='Acción recomendada: '+rd.acrecom+'\n';
+    if(rd.acrecom)msg+='Acción recomendada: '+richAWhatsApp(rd.acrecom)+'\n';
     msg+='\n';
   }
   var archs=n.archivos||[];
