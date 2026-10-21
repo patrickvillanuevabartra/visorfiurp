@@ -1136,9 +1136,9 @@ function waUrl(n){
   if(n.video){msg+=n.video+'\n\n';}
   msg+='*VISOR - Facultad de Ingeniería - URP*\n';
   msg+='_Vigilancia de Informacion de Sectores, Opinion y Regulaciones_\n\n';
+  msg+='*Fecha de publicación:* '+fecha+(hora?' - '+hora:'')+'\n\n';
   msg+='*'+n.titulo+'*\n\n';
   if(n.rm)msg+='*Fuente:* '+n.rm+'\n';
-  msg+='*Fecha de publicación:* '+fecha+(hora?' - '+hora:'')+'\n';
   if(n.region)msg+='*Region:* '+n.region+'\n';
   if(n.estado&&n.estado!==''){
     var estados={consulta:'En consulta publica',vigente:'Vigente',derogada:'Derogada'};
