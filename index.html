@@ -2174,7 +2174,7 @@ window.onload=function(){
   function saludoIngreso(){
     if(!CFG.antes) return;
     const ref=document.querySelector(CFG.antes); if(!ref || document.getElementById('urp_login')) return;
-    ref.insertAdjacentHTML('beforebegin', `<div class="urp-login" id="urp_login">${img('urp-mini')}<div class="urp-globo">¡Hola! Soy <b>Urpito</b>, del <b>SGOE FI URP</b> 👋 ${CFG.saludo||'Ingresa para empezar; te acompaño.'}</div></div>`);
+    ref.insertAdjacentHTML('beforebegin', `<div class="urp-login" id="urp_login">${img('urp-mini')}<div class="urp-globo">¡Hola! Soy <b>Urpito</b>, del <b>SGOE FI URP</b> 😊 ${CFG.saludo||'Ingresa para empezar; te acompaño.'}</div></div>`);
   }
   // 2) Asistente de ayuda: Urpito es su cara
   function asistente(){
@@ -2205,7 +2205,7 @@ window.onload=function(){
     const k='urpito_hola_'+(CFG.app||location.pathname)+'_'+new Date().toISOString().slice(0,10);
     try{ if(localStorage.getItem(k)) return; localStorage.setItem(k,'1'); }catch(_){ }
     if(document.getElementById('urp_bienvenida')) return;
-    document.body.insertAdjacentHTML('beforeend', `<div id="urp_bienvenida" role="status"><div class="urp-globo">¡Hola! Soy <b>Urpito</b>, del <b>SGOE FI URP</b> 👋<br>${CFG.tip}
+    document.body.insertAdjacentHTML('beforeend', `<div id="urp_bienvenida" role="status"><div class="urp-globo">¡Hola! Soy <b>Urpito</b>, del <b>SGOE FI URP</b> 😊<br>${CFG.tip}
       <div class="urp-bot"><button type="button" class="urp-ok" onclick="document.getElementById('urp_bienvenida').remove()">Entendido</button>
       <button type="button" class="urp-ocultar" onclick="document.getElementById('urp_bienvenida').remove();URP.alternar()">No mostrar a Urpito</button></div></div>${img('urp-cuerpo-img')}</div>`);
     setTimeout(()=>{ const x=document.getElementById('urp_bienvenida'); if(x) x.remove(); }, 20000);
