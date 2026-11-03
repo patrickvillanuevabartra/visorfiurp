@@ -33,6 +33,8 @@ var QUINTA_BASE = 'https://quintadb.com';
 var APP_ID      = 'bxW5nYl8nlkOokW4JcMfb2';
 var ENTITY_ID   = 'dcTSkFW5jdLPVdQSo-WQT8';   // tabla "Alertas" (URP)
 var ENTITY_COM  = 'dcOabkW4LcTykaW77dJ8kb';   // tabla "Comentarios" (URP)
+var ENTITY_USR  = 'aBpCk9ssbnW79XWRfmWOmO';   // tabla "Usuarios" (destinatarios de notificaciones)
+var ENTITY_TPL  = 'bmcZNdHmjihykyW47dHCkC';   // tabla "Plantillas" (correos editables)
 
 // Carpeta de Drive donde se guardan los adjuntos (la misma del original).
 var DRIVE_FOLDER_ID = '1rYHfTiHCKmY-zHRQK6sWSop1RvX75J4d';
@@ -69,7 +71,14 @@ var F = {
   hora:               'aLW4yjW7TcJOkqh2tdP1SV',
   region:             'dcV8klFx1dU4omW6DlbCk_',
   video:              'dcGCkghgTpiyFdSCkWWPjJ',
-  likes:              'cmatn1CSjgaOoZmqzplCkJ'
+  likes:              'cmatn1CSjgaOoZmqzplCkJ',
+  embed:              'aDCSkof8jhuOoEoh7cMmk5',
+  tipo_ro:            'a8bSk-W79cS5XgW4zrmSoQ',
+  probabilidad:       'dcPmoxw8jjvOk2qCk3W7jJ',
+  impacto:            'besmocW7bdt7u-eSoJq8ou',
+  indice_ro:          'ddSxjcW7XcH4kNW7e5d8kk',
+  nivel_ro:           'c-W5hdGtjdW4FdI2xdNSoo',
+  email:              'dcOsiKocrdM4kswSkbW689'
 };
 // Mapa inverso field_id -> nombre, para leer las respuestas de QuintaDB.
 var F_INV = (function(){ var o={}; for (var k in F) o[F[k]] = k; return o; })();
@@ -83,7 +92,22 @@ var FC = {
   texto:    'a-W7lcPvXdKApdNmkQDSkg',
   fecha:    'buWOOhW6PdOykpW4BdPqqK',   // tipo "Fecha y hora", devuelve d/m/Y H:M
   aprobado: 'b9mmkjW71pW5dcHCoLwSk5',
-  likes:    'cQgmk9W5XcWQLPW7FdSX1_'
+  likes:    'cQgmk9W5XcWQLPW7FdSX1_',
+  email:    'dcQq8OB8jgW5DXAComkCkD'
+};
+
+// Mapeo de la tabla Usuarios (destinatarios de notificaciones)
+var FU = {
+  email:  'cdWORcN8nnm4kKnY7dSmkt',
+  nombre: 'cyW6FcHtXcWQVdQthdLW4p',
+  activo: 'c5qColAHXcQOoLW57cOmky'
+};
+
+// Mapeo de la tabla Plantillas (correos editables)
+var FT = {
+  clave:  'cabmobW7noA4kaWR7dLtvL',
+  asunto: 'c0W6eXWOXdMikmWOxcLSkB',
+  cuerpo: 'dcNuuOzJ9cWQFcVh95n8oD'
 };
 
 // ====== CONVERSIÓN DE FECHA ==================================================
@@ -126,14 +150,15 @@ function doGet(e) {
       var norma = JSON.parse(decodeURIComponent(params.actualizar));
       var riesgoAnterior = params.riesgoAnterior || '';
       var r = actualizarNorma(norma);
-      if (r.ok) verificarYEnviarAlerta(norma, riesgoAnterior);
+      // Nota: al EDITAR no reenviamos notificaciones masivas para no saturar.
+      // El aviso a usuarios (Tipo 1) se envía solo al CREAR (ver params.payload).
       return r;
     }));
   }
   if (params.payload) {
     return jsonp(cb, withLock(function(){
       var norma = JSON.parse(decodeURIComponent(params.payload));
-      return guardarNorma(norma);
+      return guardarNormaConAvisos(norma);
     }));
   }
   // ---- COMENTARIOS ----
@@ -152,11 +177,49 @@ function doGet(e) {
   if (params.com_guardar) {
     return jsonp(cb, withLock(function(){
       var com = JSON.parse(decodeURIComponent(params.com_guardar));
-      return guardarComentario(com);
+      var res = guardarComentario(com);
+      if (res && res.ok) {
+        var textoCorto = (com.texto || '').substring(0, 200);
+        // TIPO 2: avisar a admin del nuevo comentario
+        notificarAdmin('Nuevo comentario', '"' + textoCorto + '"', com.autor || com.email);
+        // TIPO 3: confirmar al autor (si dejó su correo)
+        if (com.email) {
+          notificarUsuarioConfirmacion(com.email, 'Comentario', '"' + textoCorto + '"');
+        }
+      }
+      return res;
     }));
   }
   if (params.com_eliminar) {
     return jsonp(cb, withLock(function(){ return eliminarComentario(String(params.com_eliminar)); }));
+  }
+  if (params.com_editar) {
+    return jsonp(cb, withLock(function(){
+      var d = JSON.parse(decodeURIComponent(params.com_editar));
+      return editarComentario(d.id, d.texto);
+    }));
+  }
+
+  if (params.usr_listar) {
+    return jsonp(cb, listarUsuarios());
+  }
+  if (params.usr_guardar) {
+    return jsonp(cb, withLock(function(){
+      var u = JSON.parse(decodeURIComponent(params.usr_guardar));
+      return guardarUsuario(u);
+    }));
+  }
+  if (params.usr_eliminar) {
+    return jsonp(cb, withLock(function(){ return eliminarUsuario(String(params.usr_eliminar)); }));
+  }
+  if (params.tpl_listar) {
+    return jsonp(cb, listarPlantillas());
+  }
+  if (params.tpl_guardar) {
+    return jsonp(cb, withLock(function(){
+      var p = JSON.parse(decodeURIComponent(params.tpl_guardar));
+      return guardarPlantilla(p);
+    }));
   }
 
   if (params.callback) {                    // listar todas las normas
@@ -175,12 +238,31 @@ function doGet(e) {
 }
 
 // doPost: para subir archivos adjuntos (multipart no cabe en GET).
+// Guarda una norma y dispara los avisos por correo. Reutilizable (GET y POST).
+function guardarNormaConAvisos(norma) {
+  var res = guardarNorma(norma);
+  if (res && res.ok) {
+    notificarUsuariosRO(norma);
+    if (norma.email) notificarUsuarioConfirmacion(norma.email, 'Publicación', norma.titulo || '');
+    notificarAdmin('Nueva publicación', (norma.titulo || 'Sin título'), norma.autorNombre || norma.email);
+  }
+  return res;
+}
+
 function doPost(e) {
   var cb = (e.parameter && e.parameter.callback) || '_cb';
   try {
     var data = JSON.parse(e.postData.contents);
     if (data.accion === 'subirArchivo') {
       return jsonp(cb, subirArchivoDrive(data.nombre, data.mime, data.base64));
+    }
+    // Guardar noticia nueva por POST (permite contenido enriquecido largo)
+    if (data.accion === 'guardarNorma') {
+      return jsonp(cb, withLock(function(){ return guardarNormaConAvisos(data.norma); }));
+    }
+    // Actualizar noticia por POST
+    if (data.accion === 'actualizarNorma') {
+      return jsonp(cb, withLock(function(){ return actualizarNorma(data.norma); }));
     }
     return jsonp(cb, {ok:false, error:'acción no reconocida'});
   } catch (ex) {
@@ -242,6 +324,14 @@ function normaToQuintaValues(norma) {
   vals[F.hora]               = norma.hora || '';
   vals[F.region]             = norma.region || '';
   vals[F.video]              = norma.video || '';
+  vals[F.embed]              = norma.embed || '';
+  vals[F.tipo_ro]            = norma.tipo_ro || '';
+  if (norma.probabilidad) vals[F.probabilidad] = String(norma.probabilidad);
+  if (norma.impacto)      vals[F.impacto]      = String(norma.impacto);
+  if (norma.indice_ro)    vals[F.indice_ro]    = String(norma.indice_ro);
+  vals[F.nivel_ro]           = norma.nivel_ro || '';
+  vals[F.email]              = norma.email || '';
+  if (norma.likes !== undefined && norma.likes !== null && norma.likes !== '') vals[F.likes] = String(norma.likes);
   return vals;
 }
 
@@ -280,6 +370,13 @@ function quintaRecordToNorma(rec) {
     hora:          g('hora'),
     region:        g('region'),
     video:         g('video'),
+    embed:         g('embed'),
+    tipo_ro:       g('tipo_ro'),
+    probabilidad:  parseInt(g('probabilidad'),10) || 0,
+    impacto:       parseInt(g('impacto'),10) || 0,
+    indice_ro:     parseInt(g('indice_ro'),10) || 0,
+    nivel_ro:      g('nivel_ro'),
+    email:         g('email'),
     likes:         parseInt(g('likes'),10) || 0
   };
 }
@@ -593,13 +690,269 @@ function quintaRecordToComentario(rec) {
     texto:    g('texto'),
     fecha:    g('fecha'),            // viene ya como d/m/Y H:M
     aprobado: (g('aprobado') === 'TRUE' || g('aprobado') === true),
+    email:    g('email'),
     likes:    parseInt(g('likes'),10) || 0
   };
 }
 
 // Devuelve un objeto { norma_id: cantidad } con el conteo de comentarios aprobados.
-function contarComentariosPorNorma() {
-  var conteos = {};
+// ====== PLANTILLAS DE CORREO (editables) ===================================
+// Textos por defecto (se usan si no hay plantilla guardada en QuintaDB).
+var TPL_DEFAULT = {
+  riesgo: {
+    asunto: '[VISOR] Nuevo {tipo} - Nivel {nivel}',
+    cuerpo: 'Se ha registrado un {tipo} de nivel {nivel} en el portal VISOR:\n\n{titulo}\n\n{descripcion}\n\nVer en el portal: {enlace}'
+  },
+  admin: {
+    asunto: '[VISOR] {accion}',
+    cuerpo: 'Hay nueva actividad en el portal VISOR:\n\n{detalle}\n\nPor: {autor}\n\nIr al portal: {enlace}'
+  },
+  confirmacion: {
+    asunto: '[VISOR] Confirmación: {accion}',
+    cuerpo: 'Tu {accion} se publicó correctamente en el portal VISOR.\n\n{detalle}\n\nGracias por participar.\n\nVer el portal: {enlace}'
+  }
+};
+
+var _TPL_CACHE = null;
+function leerTodasPlantillas() {
+  if (_TPL_CACHE !== null) return _TPL_CACHE;
+  var mapa = {};
+  var page = 1;
+  while (page <= 20) {
+    var url = QUINTA_BASE + '/apps/' + APP_ID + '/dtypes/entity/' + ENTITY_TPL
+            + '.json?rest_api_key=' + encodeURIComponent(getApiKey()) + '&page=' + page;
+    var resp = UrlFetchApp.fetch(url, {method:'get', muteHttpExceptions:true});
+    if (resp.getResponseCode() !== 200) break;
+    var data; try { data = JSON.parse(resp.getContentText()); } catch(ex){ break; }
+    if (!data.records || !data.records.length) break;
+    for (var i=0;i<data.records.length;i++) {
+      var v = data.records[i].values || {};
+      var clave = v[FT.clave] || '';
+      if (clave) mapa[clave] = { recordId: data.records[i].id, asunto: v[FT.asunto] || '', cuerpo: v[FT.cuerpo] || '' };
+    }
+    if (data.records.length < 20) break;
+    page++;
+  }
+  _TPL_CACHE = mapa;
+  return mapa;
+}
+function invalidarTplCache(){ _TPL_CACHE = null; }
+
+// Obtiene una plantilla por clave; si no existe o está vacía, usa el default.
+function obtenerPlantilla(clave) {
+  var todas = leerTodasPlantillas();
+  var t = todas[clave];
+  var def = TPL_DEFAULT[clave] || {asunto:'', cuerpo:''};
+  return {
+    asunto: (t && t.asunto) ? t.asunto : def.asunto,
+    cuerpo: (t && t.cuerpo) ? t.cuerpo : def.cuerpo
+  };
+}
+
+// Reemplaza {variables} en un texto con los valores dados.
+function aplicarVars(texto, vars) {
+  var out = String(texto || '');
+  for (var k in vars) { if (vars.hasOwnProperty(k)) out = out.split('{'+k+'}').join(vars[k] || ''); }
+  return out;
+}
+
+// Convierte saltos de línea del cuerpo en HTML con la plantilla visual.
+function cuerpoAHtml(titulo, cuerpoTexto) {
+  var parrafos = String(cuerpoTexto).split('\n').map(function(l){
+    l = l.trim();
+    if (!l) return '';
+    // Si la línea es un enlace suelto, hacerlo botón
+    if (/^https?:\/\//.test(l)) return '<p style="margin:16px 0;"><a href="'+l+'" style="background:#7A1F2B;color:#fff;padding:10px 20px;border-radius:8px;text-decoration:none;font-weight:bold;">Ver en el portal</a></p>';
+    return '<p>'+l+'</p>';
+  }).join('');
+  return plantillaCorreo(titulo, parrafos);
+}
+
+// Listar/guardar plantillas para el panel de administración.
+function listarPlantillas() {
+  var todas = leerTodasPlantillas();
+  var salida = [];
+  ['riesgo','admin','confirmacion'].forEach(function(clave){
+    var t = todas[clave];
+    var def = TPL_DEFAULT[clave];
+    salida.push({
+      clave: clave,
+      asunto: (t && t.asunto) ? t.asunto : def.asunto,
+      cuerpo: (t && t.cuerpo) ? t.cuerpo : def.cuerpo,
+      personalizada: !!(t && (t.asunto || t.cuerpo))
+    });
+  });
+  return salida;
+}
+
+function guardarPlantilla(p) {
+  var clave = String(p.clave || '').trim();
+  if (!clave) return {ok:false, error:'clave vacía'};
+  var todas = leerTodasPlantillas();
+  var existe = todas[clave];
+  if (existe) {
+    var url = QUINTA_BASE + '/apps/' + APP_ID + '/dtypes/' + existe.recordId + '.json';
+    var vals = {}; vals[FT.asunto] = String(p.asunto||''); vals[FT.cuerpo] = String(p.cuerpo||'');
+    var body = { rest_api_key: getApiKey(), values: vals };
+    var resp = UrlFetchApp.fetch(url, {method:'put', contentType:'application/json', payload: JSON.stringify(body), muteHttpExceptions:true});
+    var code = resp.getResponseCode();
+    if (code >= 200 && code < 300) invalidarTplCache();
+    return (code >= 200 && code < 300) ? {ok:true} : {ok:false, error:'HTTP '+code};
+  } else {
+    var url2 = QUINTA_BASE + '/apps/' + APP_ID + '/dtypes.json';
+    var formData = 'rest_api_key=' + encodeURIComponent(getApiKey())
+                 + '&entity_id=' + encodeURIComponent(ENTITY_TPL)
+                 + '&values[' + FT.clave + ']=' + encodeURIComponent(clave)
+                 + '&values[' + FT.asunto + ']=' + encodeURIComponent(String(p.asunto||''))
+                 + '&values[' + FT.cuerpo + ']=' + encodeURIComponent(String(p.cuerpo||''));
+    var resp2 = UrlFetchApp.fetch(url2, {method:'post', contentType:'application/x-www-form-urlencoded', payload: formData, muteHttpExceptions:true});
+    var code2 = resp2.getResponseCode();
+    if (code2 >= 200 && code2 < 300) invalidarTplCache();
+    return (code2 >= 200 && code2 < 300) ? {ok:true} : {ok:false, error:'HTTP '+code2+': '+resp2.getContentText()};
+  }
+}
+
+// ====== ENVÍO DE CORREOS (NOTIFICACIONES) ==================================
+var ADMIN_NOTIF_EMAILS = ['patrick.villanueva@urp.edu.pe','patricia.vega@urp.edu.pe'];
+var PORTAL_PUBLIC_URL = 'https://patrickvillanuevabartra.github.io/visorfiurp/';
+
+// Envía un correo de forma segura (no rompe el flujo si falla).
+function enviarCorreo(destino, asunto, cuerpoHtml) {
+  try {
+    if (!destino) return false;
+    MailApp.sendEmail({ to: destino, subject: asunto, htmlBody: cuerpoHtml, name: 'VISOR FI-URP' });
+    return true;
+  } catch (e) { return false; }
+}
+
+// Plantilla base HTML para los correos.
+function plantillaCorreo(titulo, contenido) {
+  return '<div style="font-family:Arial,sans-serif;max-width:600px;margin:0 auto;border:1px solid #E5E7EB;border-radius:12px;overflow:hidden;">'
+       + '<div style="background:#7A1F2B;color:#fff;padding:18px 24px;font-size:18px;font-weight:bold;">VISOR &mdash; Facultad de Ingeniería URP</div>'
+       + '<div style="padding:24px;color:#1F2937;font-size:15px;line-height:1.6;">'
+       + '<h2 style="margin-top:0;color:#7A1F2B;font-size:19px;">' + titulo + '</h2>'
+       + contenido
+       + '</div>'
+       + '<div style="background:#F9FAFB;padding:14px 24px;font-size:12px;color:#6B7280;">Este es un mensaje automático del portal VISOR. Facultad de Ingeniería &mdash; Universidad Ricardo Palma.</div>'
+       + '</div>';
+}
+
+// TIPO 1: notifica a los usuarios de la lista cuando hay riesgo/oportunidad medio o alto.
+function notificarUsuariosRO(norma) {
+  try {
+    var tipo = norma.tipo_ro || '';
+    var nivel = norma.nivel_ro || '';
+    if (tipo !== 'riesgo' && tipo !== 'oportunidad') return;
+    var nivelLower = nivel.toLowerCase();
+    var esBajo = (nivelLower.indexOf('bajo') > -1 || nivelLower.indexOf('baja') > -1);
+    if (esBajo || !nivel) return;
+    var usuarios = listarUsuarios().filter(function(u){ return u.activo && u.email; });
+    if (!usuarios.length) return;
+    var etiqueta = (tipo === 'riesgo') ? 'Riesgo' : 'Oportunidad';
+    var link = PORTAL_PUBLIC_URL + '?abrir=' + encodeURIComponent(norma.id || '');
+    var tpl = obtenerPlantilla('riesgo');
+    var vars = {
+      tipo: etiqueta, nivel: nivel, titulo: norma.titulo || 'Sin título',
+      descripcion: norma.desc || '', enlace: link
+    };
+    var asunto = aplicarVars(tpl.asunto, vars);
+    var html = cuerpoAHtml('Nuevo ' + etiqueta + ' de nivel ' + nivel, aplicarVars(tpl.cuerpo, vars));
+    for (var i=0;i<usuarios.length;i++) enviarCorreo(usuarios[i].email, asunto, html);
+  } catch (e) {}
+}
+
+// TIPO 2: avisa a los administradores cuando alguien comenta o crea algo.
+function notificarAdmin(tipoAccion, detalle, autorEmail) {
+  try {
+    var tpl = obtenerPlantilla('admin');
+    var vars = { accion: tipoAccion, detalle: detalle || '', autor: autorEmail || 'anónimo', enlace: PORTAL_PUBLIC_URL };
+    var asunto = aplicarVars(tpl.asunto, vars);
+    var html = cuerpoAHtml(tipoAccion, aplicarVars(tpl.cuerpo, vars));
+    for (var i=0;i<ADMIN_NOTIF_EMAILS.length;i++) enviarCorreo(ADMIN_NOTIF_EMAILS[i], asunto, html);
+  } catch (e) {}
+}
+
+// TIPO 3: confirma al usuario que su comentario/registro se publicó.
+function notificarUsuarioConfirmacion(destino, tipoAccion, detalle) {
+  try {
+    if (!destino) return;
+    var tpl = obtenerPlantilla('confirmacion');
+    var vars = { accion: tipoAccion, detalle: detalle || '', enlace: PORTAL_PUBLIC_URL };
+    var asunto = aplicarVars(tpl.asunto, vars);
+    var html = cuerpoAHtml('Publicación confirmada', aplicarVars(tpl.cuerpo, vars));
+    enviarCorreo(destino, asunto, html);
+  } catch (e) {}
+}
+
+// ====== GESTIÓN DE USUARIOS (destinatarios de notificaciones) ==============
+function listarUsuarios() {
+  var lista = [];
+  var page = 1;
+  while (page <= 50) {
+    var url = QUINTA_BASE + '/apps/' + APP_ID + '/dtypes/entity/' + ENTITY_USR
+            + '.json?rest_api_key=' + encodeURIComponent(getApiKey()) + '&page=' + page;
+    var resp = UrlFetchApp.fetch(url, {method:'get', muteHttpExceptions:true});
+    if (resp.getResponseCode() !== 200) break;
+    var data; try { data = JSON.parse(resp.getContentText()); } catch(ex){ break; }
+    if (!data.records || !data.records.length) break;
+    for (var i=0;i<data.records.length;i++) {
+      var v = data.records[i].values || {};
+      lista.push({
+        recordId: data.records[i].id,
+        email:  v[FU.email]  || '',
+        nombre: v[FU.nombre] || '',
+        activo: (String(v[FU.activo]).toUpperCase() !== 'FALSE')
+      });
+    }
+    if (data.records.length < 20) break;
+    page++;
+  }
+  return lista;
+}
+
+function guardarUsuario(u) {
+  var email = String(u.email || '').trim().toLowerCase();
+  if (!email) return {ok:false, error:'email vacío'};
+  var existentes = listarUsuarios();
+  var yaExiste = null;
+  for (var i=0;i<existentes.length;i++) {
+    if (existentes[i].email.toLowerCase() === email) { yaExiste = existentes[i]; break; }
+  }
+  var activoStr = (u.activo === false || String(u.activo).toUpperCase() === 'FALSE') ? 'FALSE' : 'TRUE';
+  if (yaExiste) {
+    var url = QUINTA_BASE + '/apps/' + APP_ID + '/dtypes/' + yaExiste.recordId + '.json';
+    var vals = {};
+    vals[FU.nombre] = String(u.nombre || yaExiste.nombre || '');
+    vals[FU.activo] = activoStr;
+    var body = { rest_api_key: getApiKey(), values: vals };
+    var resp = UrlFetchApp.fetch(url, {method:'put', contentType:'application/json', payload: JSON.stringify(body), muteHttpExceptions:true});
+    var code = resp.getResponseCode();
+    return (code >= 200 && code < 300) ? {ok:true, actualizado:true} : {ok:false, error:'HTTP '+code};
+  } else {
+    var url2 = QUINTA_BASE + '/apps/' + APP_ID + '/dtypes.json';
+    var formData = 'rest_api_key=' + encodeURIComponent(getApiKey())
+                 + '&entity_id=' + encodeURIComponent(ENTITY_USR)
+                 + '&values[' + FU.email + ']=' + encodeURIComponent(email)
+                 + '&values[' + FU.nombre + ']=' + encodeURIComponent(String(u.nombre || ''))
+                 + '&values[' + FU.activo + ']=' + encodeURIComponent(activoStr);
+    var resp2 = UrlFetchApp.fetch(url2, {method:'post', contentType:'application/x-www-form-urlencoded', payload: formData, muteHttpExceptions:true});
+    var code2 = resp2.getResponseCode();
+    return (code2 >= 200 && code2 < 300) ? {ok:true, creado:true} : {ok:false, error:'HTTP '+code2+': '+resp2.getContentText()};
+  }
+}
+
+function eliminarUsuario(recordId) {
+  var url = QUINTA_BASE + '/apps/' + APP_ID + '/dtypes/' + recordId + '.json';
+  var resp = UrlFetchApp.fetch(url, {method:'delete', contentType:'application/json', payload: JSON.stringify({rest_api_key: getApiKey()}), muteHttpExceptions:true});
+  var code = resp.getResponseCode();
+  return (code >= 200 && code < 300) ? {ok:true} : {ok:false, error:'HTTP '+code};
+}
+
+// === CACHÉ de comentarios (se llena una vez por ejecución) ===
+var _COM_CACHE = null;
+function leerTodosComentarios() {
+  if (_COM_CACHE !== null) return _COM_CACHE;
+  var lista = [];
   var page = 1;
   while (page <= 100) {
     var url = QUINTA_BASE + '/apps/' + APP_ID + '/dtypes/entity/' + ENTITY_COM
@@ -610,37 +963,74 @@ function contarComentariosPorNorma() {
     if (!data.records || !data.records.length) break;
     for (var i=0;i<data.records.length;i++) {
       var c = quintaRecordToComentario(data.records[i]);
-      if (c.aprobado && c.norma_id) {
-        conteos[c.norma_id] = (conteos[c.norma_id] || 0) + 1;
-      }
+      c._recordId = data.records[i].id;
+      lista.push(c);
     }
     if (data.records.length < 20) break;
     page++;
+  }
+  _COM_CACHE = lista;
+  return lista;
+}
+function invalidarComCache(){ _COM_CACHE = null; }
+
+function contarComentariosPorNorma() {
+  var conteos = {};
+  var todos = leerTodosComentarios();
+  for (var i=0;i<todos.length;i++) {
+    var c = todos[i];
+    if (c.aprobado && c.norma_id) conteos[c.norma_id] = (conteos[c.norma_id] || 0) + 1;
   }
   return conteos;
 }
 
+// OPCIÓN C: pide a QuintaDB SOLO los comentarios de una norma, vía búsqueda REST.
+// Si la búsqueda falla por cualquier motivo, devuelve null (el llamador usa el método completo).
+function buscarComentariosDeNorma(normaId) {
+  try {
+    var lista = [];
+    var page = 1;
+    // search: [[PROPERTY_ID, "VALOR", "is"]] -> igualdad exacta por norma_id
+    var searchArr = [[FC.norma_id, String(normaId), "is"]];
+    var searchParam = encodeURIComponent(JSON.stringify(searchArr));
+    while (page <= 100) {
+      var url = QUINTA_BASE + '/apps/' + APP_ID + '/dtypes/entity/' + ENTITY_COM
+              + '.json?rest_api_key=' + encodeURIComponent(getApiKey())
+              + '&search=' + searchParam + '&page=' + page;
+      var resp = UrlFetchApp.fetch(url, {method:'get', muteHttpExceptions:true});
+      if (resp.getResponseCode() !== 200) return null; // fallo -> fallback
+      var data; try { data = JSON.parse(resp.getContentText()); } catch(ex){ return null; }
+      if (!data.records) return null;
+      for (var i=0;i<data.records.length;i++) {
+        var c = quintaRecordToComentario(data.records[i]);
+        c._recordId = data.records[i].id;
+        lista.push(c);
+      }
+      if (data.records.length < 20) break;
+      page++;
+    }
+    return lista;
+  } catch(e) { return null; }
+}
+
 // Lista todos los comentarios APROBADOS de una norma dada.
 function obtenerComentarios(normaId) {
-  var todos = [];
-  var page = 1;
-  while (page <= 100) {
-    var url = QUINTA_BASE + '/apps/' + APP_ID + '/dtypes/entity/' + ENTITY_COM
-            + '.json?rest_api_key=' + encodeURIComponent(getApiKey()) + '&page=' + page;
-    var resp = UrlFetchApp.fetch(url, {method:'get', muteHttpExceptions:true});
-    if (resp.getResponseCode() !== 200) break;
-    var data; try { data = JSON.parse(resp.getContentText()); } catch(ex){ break; }
-    if (!data.records || !data.records.length) break;
-    for (var i=0;i<data.records.length;i++) {
-      var c = quintaRecordToComentario(data.records[i]);
-      if (String(c.norma_id) === String(normaId) && c.aprobado) todos.push(c);
-    }
-    if (data.records.length < 20) break;
-    page++;
+  // Intento rápido (Opción C): pedir solo los de esta norma
+  var directa = buscarComentariosDeNorma(normaId);
+  var base;
+  if (directa !== null) {
+    // La búsqueda REST puede traer de más: filtrar por norma_id exacto Y aprobado.
+    base = directa.filter(function(c){
+      return String(c.norma_id) === String(normaId) && c.aprobado;
+    });
+  } else {
+    // Fallback: usar la caché completa
+    base = leerTodosComentarios().filter(function(c){
+      return String(c.norma_id) === String(normaId) && c.aprobado;
+    });
   }
-  // Orden cronológico ascendente por id (que es timestamp).
-  todos.sort(function(a,b){ return String(a.id).localeCompare(String(b.id)); });
-  return todos;
+  base.sort(function(a,b){ return String(a.id).localeCompare(String(b.id)); });
+  return base;
 }
 
 function buildComFormPayload(com) {
@@ -674,6 +1064,7 @@ function guardarComentario(com) {
     muteHttpExceptions:true
   });
   var code = resp.getResponseCode();
+  if (code >= 200 && code < 300) invalidarComCache();
   return (code >= 200 && code < 300) ? {ok:true} : {ok:false, error:'HTTP '+code+': '+resp.getContentText()};
 }
 
@@ -686,51 +1077,49 @@ function comToQuintaValues(com) {
   vals[FC.texto]    = (com.texto || '').substring(0, 2000);
   vals[FC.fecha]    = com.fecha || nowFechaHora();
   vals[FC.aprobado] = 'TRUE';
+  vals[FC.email]    = com.email || '';
   return vals;
 }
 
 function buscarComRecordId(idCom) {
-  var page = 1;
-  while (page <= 100) {
-    var url = QUINTA_BASE + '/apps/' + APP_ID + '/dtypes/entity/' + ENTITY_COM
-            + '.json?rest_api_key=' + encodeURIComponent(getApiKey()) + '&page=' + page;
-    var resp = UrlFetchApp.fetch(url, {method:'get', muteHttpExceptions:true});
-    if (resp.getResponseCode() !== 200) break;
-    var data; try { data = JSON.parse(resp.getContentText()); } catch(ex){ break; }
-    if (!data.records || !data.records.length) break;
-    for (var i=0;i<data.records.length;i++) {
-      var c = quintaRecordToComentario(data.records[i]);
-      if (String(c.id) === String(idCom)) return c.quinta_record_id;
-    }
-    if (data.records.length < 20) break;
-    page++;
+  var todos = leerTodosComentarios();
+  for (var i=0;i<todos.length;i++) {
+    if (String(todos[i].id) === String(idCom)) return todos[i]._recordId;
   }
   return null;
 }
 
+// Edita el texto de un comentario existente.
+function editarComentario(idCom, nuevoTexto) {
+  var recId = buscarComRecordId(idCom);
+  if (!recId) return {ok:false, error:'comentario no encontrado'};
+  var url = QUINTA_BASE + '/apps/' + APP_ID + '/dtypes/' + recId + '.json';
+  var vals = {};
+  vals[FC.texto] = String(nuevoTexto || '').substring(0, 2000);
+  var body = { rest_api_key: getApiKey(), values: vals };
+  var resp = UrlFetchApp.fetch(url, {
+    method:'put', contentType:'application/json',
+    payload: JSON.stringify(body), muteHttpExceptions:true
+  });
+  var code = resp.getResponseCode();
+  if (code >= 200 && code < 300) invalidarComCache();
+  return (code >= 200 && code < 300) ? {ok:true} : {ok:false, error:'HTTP '+code+': '+resp.getContentText()};
+}
+
 // Elimina un comentario y todas sus respuestas (hilo completo).
 function eliminarComentario(idCom) {
-  // Primero, recolectar el comentario y sus descendientes.
-  var aBorrar = [String(idCom)];
-  // Buscar respuestas directas (un nivel; suficiente para hilos cortos).
-  var page = 1;
-  while (page <= 100) {
-    var url = QUINTA_BASE + '/apps/' + APP_ID + '/dtypes/entity/' + ENTITY_COM
-            + '.json?rest_api_key=' + encodeURIComponent(getApiKey()) + '&page=' + page;
-    var resp = UrlFetchApp.fetch(url, {method:'get', muteHttpExceptions:true});
-    if (resp.getResponseCode() !== 200) break;
-    var data; try { data = JSON.parse(resp.getContentText()); } catch(ex){ break; }
-    if (!data.records || !data.records.length) break;
-    for (var i=0;i<data.records.length;i++) {
-      var c = quintaRecordToComentario(data.records[i]);
-      if (String(c.padre_id) === String(idCom)) aBorrar.push(String(c.id));
+  var todos = leerTodosComentarios();
+  // Recolectar el comentario y sus respuestas directas, con sus recordIds.
+  var aBorrar = [];  // {id, recordId}
+  for (var i=0;i<todos.length;i++) {
+    var c = todos[i];
+    if (String(c.id) === String(idCom) || String(c.padre_id) === String(idCom)) {
+      aBorrar.push({id:c.id, recordId:c._recordId});
     }
-    if (data.records.length < 20) break;
-    page++;
   }
   var okCount = 0;
   for (var k=0;k<aBorrar.length;k++) {
-    var recId = buscarComRecordId(aBorrar[k]);
+    var recId = aBorrar[k].recordId;
     if (recId) {
       var u = QUINTA_BASE + '/apps/' + APP_ID + '/dtypes/' + recId + '.json';
       var r = UrlFetchApp.fetch(u, {
@@ -742,6 +1131,7 @@ function eliminarComentario(idCom) {
       if (r.getResponseCode() >= 200 && r.getResponseCode() < 300) okCount++;
     }
   }
+  invalidarComCache();
   return {ok: okCount > 0, eliminados: okCount};
 }
 
@@ -773,27 +1163,12 @@ function darLikeNorma(idApp) {
 
 // Incrementa en 1 el contador de likes de un comentario.
 function darLikeComentario(idCom) {
-  var recId = buscarComRecordId(idCom);
-  if (!recId) return {ok:false, error:'comentario no encontrado'};
-  // Leer valor actual recorriendo los comentarios
-  var actual = 0;
-  var page = 1;
-  while (page <= 100) {
-    var u = QUINTA_BASE + '/apps/' + APP_ID + '/dtypes/entity/' + ENTITY_COM
-          + '.json?rest_api_key=' + encodeURIComponent(getApiKey()) + '&page=' + page;
-    var rp = UrlFetchApp.fetch(u, {method:'get', muteHttpExceptions:true});
-    if (rp.getResponseCode() !== 200) break;
-    var data; try { data = JSON.parse(rp.getContentText()); } catch(ex){ break; }
-    if (!data.records || !data.records.length) break;
-    var found = false;
-    for (var i=0;i<data.records.length;i++) {
-      var c = quintaRecordToComentario(data.records[i]);
-      if (String(c.id) === String(idCom)) { actual = c.likes || 0; found = true; break; }
-    }
-    if (found) break;
-    if (data.records.length < 20) break;
-    page++;
+  var todos = leerTodosComentarios();
+  var recId = null, actual = 0;
+  for (var i=0;i<todos.length;i++) {
+    if (String(todos[i].id) === String(idCom)) { recId = todos[i]._recordId; actual = todos[i].likes || 0; break; }
   }
+  if (!recId) return {ok:false, error:'comentario no encontrado'};
   var nuevo = actual + 1;
   var url = QUINTA_BASE + '/apps/' + APP_ID + '/dtypes/' + recId + '.json';
   var vals = {}; vals[FC.likes] = String(nuevo);
@@ -803,10 +1178,22 @@ function darLikeComentario(idCom) {
     payload: JSON.stringify(body), muteHttpExceptions:true
   });
   var code = resp.getResponseCode();
+  if (code >= 200 && code < 300) invalidarComCache();
   return (code >= 200 && code < 300) ? {ok:true, likes:nuevo} : {ok:false, error:'HTTP '+code+': '+resp.getContentText()};
 }
 
 // ====== UTILIDADES DE PRUEBA ================================================
+function _test_correo() {
+  // Envía un correo de prueba a tu dirección para verificar que MailApp funciona.
+  var r = enviarCorreo('patrick.villanueva@urp.edu.pe', '[VISOR] Correo de prueba', plantillaCorreo('Prueba de notificación', '<p>Si recibes este correo, el envío automático funciona correctamente.</p>'));
+  Logger.log('Correo enviado: ' + r);
+}
+function _test_buscar_com_norma() {
+  // Cambia 'ID_DE_UNA_NORMA' por el id real de una noticia que tenga comentarios
+  var r = buscarComentariosDeNorma('ID_DE_UNA_NORMA');
+  if (r === null) { Logger.log('La búsqueda REST FALLÓ (usará fallback). Revisar sintaxis.'); }
+  else { Logger.log('Búsqueda REST OK. Comentarios encontrados: ' + r.length); Logger.log(JSON.stringify(r, null, 2)); }
+}
 function _test_listar() {
   var n = obtenerNormas();
   Logger.log('Registros: ' + n.length);
