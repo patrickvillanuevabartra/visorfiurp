@@ -1644,6 +1644,8 @@ function comprimirNorma(n){
   if(n.etiquetas&&n.etiquetas.length)c.etiquetas=n.etiquetas;
   if(n.disposiciones&&n.disposiciones.length)c.disposiciones=n.disposiciones;
   if(n.relacionadas&&n.relacionadas.length)c.relacionadas=n.relacionadas;
+  if(n.email)c.email=n.email; // correo del creador (para notificaciones)
+  if(n.autorNombre)c.autorNombre=n.autorNombre; // nombre del creador (para el correo al admin)
   var rd=n.riesgoDetalle||{};
   if(rd.conflicto||( rd.focos&&rd.focos.length)||rd.acrecom)c.riesgoDetalle=rd;
   return c;
@@ -2073,7 +2075,7 @@ function guardar(){
     etiquetas:FE.slice(),disposiciones:d.di,relacionadas:[],
     archivos:FA.slice(),padreId:PADRE_ID||'',
     riesgoDetalle:{conflicto:getRTE(RTE_CONFLICTO),focos:FC.slice(),acrecom:getRTE(RTE_ACRECOM)},
-    email:(USER?USER.email:"")};
+    email:(USER?USER.email:""),autorNombre:(USER?USER.nombre:"")};
   NM.unshift(n);
   if(PADRE_ID)HX[String(PADRE_ID)]=true;
   saveSheet(n);cerrarModal();render();tst("Guardado");
