@@ -193,6 +193,8 @@ body{background:#CBD5E1;padding:24px 16px;font-family:"IBM Plex Sans",sans-serif
 .like-btn:hover{background:var(--blue-light);border-color:#BAE6FD;color:var(--blue);}
 .like-btn.liked{background:#EFF6FF;border-color:#BAE6FD;color:var(--blue);}
 .like-btn .like-ico{font-size:14px;}
+.like-ver{font-size:13px;color:var(--muted);text-decoration:none;cursor:pointer;margin-left:2px;white-space:nowrap;}
+.like-ver:hover{color:var(--blue);text-decoration:underline;}
 .com-like-btn{display:inline-flex;align-items:center;gap:4px;background:none;border:none;padding:0;font-size:13px;font-weight:600;color:#7C3AED;cursor:pointer;font-family:inherit;}
 .com-like-btn:hover{text-decoration:underline;}
 .com-like-btn.liked{color:var(--blue);}
@@ -1442,7 +1444,8 @@ function card(n,idx,nivel){
     (n.video?"<a class='norma-link' href='"+esc(n.video)+"' target='_blank' style='color:#E53E3E;'>&#9654; Ver video</a>":"")+
     "<a class='wa-link' href='#' onclick='window.open(waUrl(NM["+idx+"]),\"_blank\");return false;'>Compartir por WhatsApp</a>"+
     "<a class='com-count-card' href='#' onclick='abrirYComentar(\""+id+"\");return false;' title='Ver comentarios'>&#128172; "+(COM_CONTEOS[id]||0)+" comentario"+((COM_CONTEOS[id]||0)===1?"":"s")+"</a>"+
-    "<button class='like-btn"+(yaDioLike("norma",id)?" liked":"")+"' onclick='darLikeNorma(\""+id+"\",this)' title='Me gusta'><span class='like-ico'>&#128077;</span> <span class='like-num'>"+(n.likes||0)+"</span></button>"+
+    "<button class='like-btn"+(yoDiLike(n.likers)?" liked":"")+"' data-nid='"+id+"' onclick='darLikeNorma(\""+id+"\",this)' title='"+(yoDiLike(n.likers)?"Quitar me gusta":"Me gusta")+"'><span class='like-ico'>&#128077;</span> <span class='like-num'>"+(n.likes||0)+"</span></button>"+
+    ((n.likes||0)>0?"<a class='like-ver' href='#' onclick='verQuienesLike(\"norma\",\""+id+"\",\"\");return false;' title='Ver quiénes dieron me gusta'>ver quiénes</a>":"")+
     "</div>"+
     "<div class='norma-detail"+(isO?" open":"")+"'>"+bldDetail(n)+"</div></div>";
 }
@@ -1696,44 +1699,162 @@ function cargarConteosComentarios(){
   document.head.appendChild(sc);
 }
 
-// ===== LIKES (1 por navegador, recordado en localStorage) =====
-function yaDioLike(tipo,id){
-  try{ return localStorage.getItem("like_"+tipo+"_"+id)==="1"; }catch(e){ return false; }
+// ===== LIKES CON IDENTIDAD (dar / quitar me gusta, ver quiénes) =====
+// Los likes se guardan en el servidor con el correo de cada persona (campo
+// "likers"). Dar me gusta requiere haber iniciado sesión.
+//
+// Helpers: a partir del texto "likers" de un registro saber si YO ya di like
+// y obtener la lista de nombres.
+function likersParseFront(txt){
+  var out=[]; if(!txt) return out;
+  var partes=String(txt).split("|");
+  for(var i=0;i<partes.length;i++){
+    var p=partes[i]; if(!p) continue;
+    var kv=p.split("␟");
+    var em=(kv[0]||"").trim().toLowerCase(); if(!em) continue;
+    out.push({email:em, nombre:(kv[1]||"").trim()});
+  }
+  return out;
 }
-function marcarLike(tipo,id){
-  try{ localStorage.setItem("like_"+tipo+"_"+id,"1"); }catch(e){}
+function yoDiLike(likersTxt){
+  if(!USER||!USER.email) return false;
+  var me=USER.email.toLowerCase();
+  var l=likersParseFront(likersTxt);
+  for(var i=0;i<l.length;i++) if(l[i].email===me) return true;
+  return false;
+}
+function likersNombresFront(likersTxt){
+  return likersParseFront(likersTxt).map(function(x){return x.nombre||x.email;});
 }
 
 function darLikeNorma(normaId,btn){
-  if(yaDioLike("norma",normaId)){tst("Ya diste tu like");return;}
-  marcarLike("norma",normaId);
-  // Optimista: subir el número al instante
+  if(!USER){tst("Inicia sesión para dar me gusta");return;}
   var n=NM.find(function(x){return String(x.id)===String(normaId);});
-  if(n){n.likes=(n.likes||0)+1;}
-  if(btn){btn.classList.add("liked");var c=btn.querySelector(".like-num");if(c)c.textContent=(n?n.likes:1);}
+  var teniaLike=yoDiLike(n?n.likers:"");
+  // Optimista: alternar al instante
+  if(n){
+    var l=likersParseFront(n.likers);
+    var me=USER.email.toLowerCase();
+    if(teniaLike){ l=l.filter(function(x){return x.email!==me;}); }
+    else{ l.push({email:me, nombre:USER.nombre||me}); }
+    n.likers=l.map(function(x){return x.email+"␟"+(x.nombre||"");}).join("|");
+    n.likes=l.length;
+  }
+  pintarLikeNorma(normaId,btn,n);
   var cb="_lkn"+Date.now();
   window[cb]=function(r){try{delete window[cb];}catch(e){}
-    if(r&&r.ok&&n){n.likes=r.likes;if(btn){var c2=btn.querySelector(".like-num");if(c2)c2.textContent=r.likes;}}
+    if(r&&r.ok&&n){
+      n.likes=r.likes;
+      // Reconstruir likers desde la respuesta no es posible (solo trae nombres),
+      // pero el estado optimista ya es correcto. Confirmamos el conteo.
+      pintarLikeNorma(normaId,btn,n);
+    } else if(r&&!r.ok){
+      tst(r.error||"No se pudo registrar el me gusta");
+    }
   };
   var sc=document.createElement("script");
-  sc.src=SU+"?like_norma="+encodeURIComponent(normaId)+"&callback="+cb+"&t="+Date.now();
+  sc.src=SU+"?like_norma="+encodeURIComponent(normaId)
+        +"&email="+encodeURIComponent(USER.email||"")
+        +"&nombre="+encodeURIComponent(USER.nombre||"")
+        +"&callback="+cb+"&t="+Date.now();
   document.head.appendChild(sc);
+}
+// Repinta el botón de like de una norma según el estado actual del registro.
+function pintarLikeNorma(normaId,btn,n){
+  if(!btn){ btn=document.querySelector(".like-btn[data-nid='"+normaId+"']"); }
+  if(!btn||!n) return;
+  var yo=yoDiLike(n.likers);
+  btn.classList.toggle("liked",yo);
+  btn.setAttribute("title",yo?"Quitar me gusta":"Me gusta");
+  var c=btn.querySelector(".like-num"); if(c)c.textContent=(n.likes||0);
+  // Mostrar/ocultar el enlace "ver quiénes" según haya likes
+  var ver=btn.parentNode?btn.parentNode.querySelector(".like-ver"):null;
+  if((n.likes||0)>0 && !ver && btn.parentNode){
+    ver=document.createElement("a");
+    ver.className="like-ver"; ver.href="#"; ver.textContent="ver quiénes";
+    ver.title="Ver quiénes dieron me gusta";
+    ver.onclick=function(){ verQuienesLike("norma",String(n.id),""); return false; };
+    btn.parentNode.insertBefore(ver, btn.nextSibling);
+  } else if((n.likes||0)===0 && ver){ ver.parentNode.removeChild(ver); }
 }
 
 function darLikeComentarioFront(comId,normaId,btn){
-  if(yaDioLike("com",comId)){tst("Ya diste tu like");return;}
-  marcarLike("com",comId);
+  if(!USER){tst("Inicia sesión para dar me gusta");return;}
   var arr=COM_CACHE[normaId]||[];
   var c=arr.find(function(x){return String(x.id)===String(comId);});
-  if(c){c.likes=(c.likes||0)+1;}
-  if(btn){btn.classList.add("liked");var nn=btn.querySelector(".clike-num");if(nn)nn.textContent=(c?c.likes:1);}
+  var teniaLike=yoDiLike(c?c.likers:"");
+  if(c){
+    var l=likersParseFront(c.likers);
+    var me=USER.email.toLowerCase();
+    if(teniaLike){ l=l.filter(function(x){return x.email!==me;}); }
+    else{ l.push({email:me, nombre:USER.nombre||me}); }
+    c.likers=l.map(function(x){return x.email+"␟"+(x.nombre||"");}).join("|");
+    c.likes=l.length;
+  }
+  pintarLikeCom(comId,btn,c);
   var cb="_lkc"+Date.now();
   window[cb]=function(r){try{delete window[cb];}catch(e){}
-    if(r&&r.ok&&c){c.likes=r.likes;if(btn){var n2=btn.querySelector(".clike-num");if(n2)n2.textContent=r.likes;}}
+    if(r&&r.ok&&c){ c.likes=r.likes; pintarLikeCom(comId,btn,c); }
+    else if(r&&!r.ok){ tst(r.error||"No se pudo registrar el me gusta"); }
   };
   var sc=document.createElement("script");
-  sc.src=SU+"?like_comentario="+encodeURIComponent(comId)+"&callback="+cb+"&t="+Date.now();
+  sc.src=SU+"?like_comentario="+encodeURIComponent(comId)
+        +"&email="+encodeURIComponent(USER.email||"")
+        +"&nombre="+encodeURIComponent(USER.nombre||"")
+        +"&callback="+cb+"&t="+Date.now();
   document.head.appendChild(sc);
+}
+function pintarLikeCom(comId,btn,c){
+  if(!btn){ btn=document.querySelector(".com-like-btn[data-cid='"+comId+"']"); }
+  if(!btn||!c) return;
+  var yo=yoDiLike(c.likers);
+  btn.classList.toggle("liked",yo);
+  var nn=btn.querySelector(".clike-num"); if(nn)nn.textContent=(c.likes||0);
+  var ver=btn.parentNode?btn.parentNode.querySelector(".like-ver"):null;
+  if((c.likes||0)>0 && !ver && btn.parentNode){
+    ver=document.createElement("a");
+    ver.className="like-ver"; ver.href="#"; ver.textContent="ver quiénes";
+    ver.onclick=(function(cid,nid){return function(){ verQuienesLike("com",cid,nid); return false; };})(String(c.id),String(c.norma_id||""));
+    btn.parentNode.insertBefore(ver, btn.nextSibling);
+  } else if((c.likes||0)===0 && ver){ ver.parentNode.removeChild(ver); }
+}
+
+// ===== VER QUIÉNES DIERON LIKE =====
+function verQuienesLike(tipo,id,normaId){
+  var reg=null;
+  if(tipo==="norma"){ reg=NM.find(function(x){return String(x.id)===String(id);}); }
+  else{ var arr=COM_CACHE[normaId]||[]; reg=arr.find(function(x){return String(x.id)===String(id);}); }
+  var nombres = reg ? likersNombresFront(reg.likers) : [];
+  var cuerpo;
+  if(!nombres.length){
+    cuerpo="<p style='color:var(--muted);margin:0;'>Aún nadie ha dado me gusta.</p>";
+  }else{
+    cuerpo="<ul style='margin:0;padding-left:0;list-style:none;'>"+
+      nombres.map(function(nm){
+        return "<li style='padding:8px 4px;border-bottom:1px solid var(--border);font-size:15px;color:var(--text);'>&#128100; "+esc(nm)+"</li>";
+      }).join("")+"</ul>";
+  }
+  abrirModalLikes((nombres.length)+" me gusta", cuerpo);
+}
+function abrirModalLikes(titulo,cuerpoHtml){
+  var ov=document.getElementById("likesModal");
+  if(!ov){
+    ov=document.createElement("div");
+    ov.id="likesModal";
+    ov.style.cssText="position:fixed;inset:0;background:rgba(15,23,42,0.55);display:flex;align-items:center;justify-content:center;z-index:9999;padding:16px;";
+    ov.onclick=function(e){ if(e.target===ov) ov.style.display="none"; };
+    ov.innerHTML="<div style='background:var(--card,#fff);border-radius:14px;max-width:420px;width:100%;max-height:80vh;overflow:auto;box-shadow:0 20px 50px rgba(0,0,0,0.3);'>"+
+      "<div style='display:flex;align-items:center;justify-content:space-between;padding:16px 18px;border-bottom:1px solid var(--border);'>"+
+        "<strong id='likesModalTit' style='font-size:17px;color:var(--text);'></strong>"+
+        "<button onclick=\"document.getElementById('likesModal').style.display='none'\" style='background:none;border:none;font-size:24px;line-height:1;color:var(--muted);cursor:pointer;'>&times;</button>"+
+      "</div>"+
+      "<div id='likesModalBody' style='padding:14px 18px;'></div>"+
+    "</div>";
+    document.body.appendChild(ov);
+  }
+  document.getElementById("likesModalTit").textContent=titulo;
+  document.getElementById("likesModalBody").innerHTML=cuerpoHtml;
+  ov.style.display="flex";
 }
 
 // Abre la noticia (si no está abierta) y carga/enfoca sus comentarios.
@@ -1792,7 +1913,8 @@ function pintarComentarios(normaId){
       "<div class='com-text' id='comtext-"+esc(c.id)+"'>"+esc(textoLimpio)+"</div>"+
       "<div id='editform-"+esc(c.id)+"'></div>"+
       "<div class='com-actions'>"+
-        "<button class='com-like-btn"+(yaDioLike("com",c.id)?" liked":"")+"' onclick='darLikeComentarioFront(\""+esc(c.id)+"\",\""+esc(normaId)+"\",this)'>&#128077; <span class='clike-num'>"+(c.likes||0)+"</span></button>"+
+        "<button class='com-like-btn"+(yoDiLike(c.likers)?" liked":"")+"' data-cid='"+esc(c.id)+"' onclick='darLikeComentarioFront(\""+esc(c.id)+"\",\""+esc(normaId)+"\",this)'>&#128077; <span class='clike-num'>"+(c.likes||0)+"</span></button>"+
+        ((c.likes||0)>0?"<a class='like-ver' href='#' onclick='verQuienesLike(\"com\",\""+esc(c.id)+"\",\""+esc(normaId)+"\");return false;'>ver quiénes</a>":"")+
         ((USER&&nivel<2)?"<button class='com-act-btn' onclick='mostrarFormResp(\""+esc(normaId)+"\",\""+esc(c.id)+"\")'>Responder</button>":"")+
         (puedeModificar?"<button class='com-act-btn' onclick='editarComentarioFront(\""+esc(normaId)+"\",\""+esc(c.id)+"\")'>Editar</button>":"")+
         (puedeModificar?"<button class='com-act-btn del' onclick='borrarComentario(\""+esc(normaId)+"\",\""+esc(c.id)+"\")'>Eliminar</button>":"")+

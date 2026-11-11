@@ -78,7 +78,8 @@ var F = {
   impacto:            'besmocW7bdt7u-eSoJq8ou',
   indice_ro:          'ddSxjcW7XcH4kNW7e5d8kk',
   nivel_ro:           'c-W5hdGtjdW4FdI2xdNSoo',
-  email:              'dcOsiKocrdM4kswSkbW689'
+  email:              'dcOsiKocrdM4kswSkbW689',
+  likers:             'ddH8oTWOTlxyona8kUaSof'   // <-- campo Texto "likers" en la tabla Alertas
 };
 // Mapa inverso field_id -> nombre, para leer las respuestas de QuintaDB.
 var F_INV = (function(){ var o={}; for (var k in F) o[F[k]] = k; return o; })();
@@ -93,7 +94,8 @@ var FC = {
   fecha:    'buWOOhW6PdOykpW4BdPqqK',   // tipo "Fecha y hora", devuelve d/m/Y H:M
   aprobado: 'b9mmkjW71pW5dcHCoLwSk5',
   likes:    'cQgmk9W5XcWQLPW7FdSX1_',
-  email:    'dcQq8OB8jgW5DXAComkCkD'
+  email:    'dcQq8OB8jgW5DXAComkCkD',
+  likers:   'PEGAR_FIELD_ID_LIKERS_COMENTARIOS'   // <-- campo Texto "likers" en la tabla Comentarios
 };
 
 // Mapeo de la tabla Usuarios (destinatarios de notificaciones)
@@ -169,10 +171,14 @@ function doGet(e) {
     return jsonp(cb, contarComentariosPorNorma());
   }
   if (params.like_norma) {
-    return jsonp(cb, withLock(function(){ return darLikeNorma(String(params.like_norma)); }));
+    var emN = params.email ? decodeURIComponent(String(params.email)) : '';
+    var nmN = params.nombre ? decodeURIComponent(String(params.nombre)) : '';
+    return jsonp(cb, withLock(function(){ return toggleLikeNorma(String(params.like_norma), emN, nmN); }));
   }
   if (params.like_comentario) {
-    return jsonp(cb, withLock(function(){ return darLikeComentario(String(params.like_comentario)); }));
+    var emC = params.email ? decodeURIComponent(String(params.email)) : '';
+    var nmC = params.nombre ? decodeURIComponent(String(params.nombre)) : '';
+    return jsonp(cb, withLock(function(){ return toggleLikeComentario(String(params.like_comentario), emC, nmC); }));
   }
   if (params.com_guardar) {
     return jsonp(cb, withLock(function(){
@@ -377,7 +383,8 @@ function quintaRecordToNorma(rec) {
     indice_ro:     parseInt(g('indice_ro'),10) || 0,
     nivel_ro:      g('nivel_ro'),
     email:         g('email'),
-    likes:         parseInt(g('likes'),10) || 0
+    likes:         parseInt(g('likes'),10) || 0,
+    likers:        g('likers') || ''
   };
 }
 
@@ -691,7 +698,8 @@ function quintaRecordToComentario(rec) {
     fecha:    g('fecha'),            // viene ya como d/m/Y H:M
     aprobado: (g('aprobado') === 'TRUE' || g('aprobado') === true),
     email:    g('email'),
-    likes:    parseInt(g('likes'),10) || 0
+    likes:    parseInt(g('likes'),10) || 0,
+    likers:   g('likers') || ''
   };
 }
 
@@ -1142,44 +1150,99 @@ function nowFechaHora() {
 
 // ====== LIKES ===============================================================
 // Incrementa en 1 el contador de likes de una norma. Devuelve el nuevo total.
-function darLikeNorma(idApp) {
+// ====== LIKES CON IDENTIDAD (toggle like / unlike) =========================
+// La lista de "quiénes dieron like" se guarda en el campo de texto "likers".
+// Formato: cada entrada es  email␟nombre  y se separan con "|".
+//   ej.:  juan@urp.edu.pe␟Juan Perez|ana@urp.edu.pe␟Ana Díaz
+// El símbolo ␟ (U+241F) separa correo y nombre sin chocar con texto normal.
+var LK_SEP   = '|';
+var LK_SUBSEP = '␟';
+
+function likersParse(txt) {                 // texto -> [{email, nombre}]
+  var out = [];
+  if (!txt) return out;
+  var partes = String(txt).split(LK_SEP);
+  for (var i=0;i<partes.length;i++) {
+    var p = partes[i]; if (!p) continue;
+    var kv = p.split(LK_SUBSEP);
+    var em = (kv[0]||'').trim().toLowerCase();
+    if (!em) continue;
+    out.push({ email: em, nombre: (kv[1]||'').trim() });
+  }
+  return out;
+}
+function likersStringify(arr) {             // [{email, nombre}] -> texto
+  return arr.map(function(x){ return x.email + LK_SUBSEP + (x.nombre||''); }).join(LK_SEP);
+}
+// Devuelve la lista pública de nombres (para mostrar "quiénes dieron like").
+function likersNombres(arr) {
+  return arr.map(function(x){ return x.nombre || x.email; });
+}
+
+// Alterna el like de una NORMA para un usuario (identificado por su correo).
+// Si ya tenía like -> lo quita (unlike). Si no -> lo agrega (like).
+function toggleLikeNorma(idApp, email, nombre) {
+  email = (email||'').trim().toLowerCase();
+  if (!email) return {ok:false, error:'Inicia sesión para dar me gusta'};
   var recId = buscarRecordId(idApp);
   if (!recId) return {ok:false, error:'norma no encontrada'};
-  // Leer el valor actual de likes
   var n = null;
   var normas = obtenerNormas();
   for (var i=0;i<normas.length;i++) if (String(normas[i].id) === String(idApp)) { n = normas[i]; break; }
-  var nuevo = ((n && n.likes) || 0) + 1;
+  var lista = likersParse(n ? n.likers : '');
+  var idx = -1;
+  for (var j=0;j<lista.length;j++) if (lista[j].email === email) { idx = j; break; }
+  var yo;
+  if (idx >= 0) { lista.splice(idx,1); yo = false; }        // unlike
+  else { lista.push({email:email, nombre:(nombre||'').trim()}); yo = true; }  // like
+  var nuevoTxt = likersStringify(lista);
+  var nuevoCount = lista.length;
   var url = QUINTA_BASE + '/apps/' + APP_ID + '/dtypes/' + recId + '.json';
-  var vals = {}; vals[F.likes] = String(nuevo);
+  var vals = {};
+  vals[F.likes]  = String(nuevoCount);
+  vals[F.likers] = nuevoTxt;
   var body = { rest_api_key: getApiKey(), values: vals };
   var resp = UrlFetchApp.fetch(url, {
     method:'put', contentType:'application/json',
     payload: JSON.stringify(body), muteHttpExceptions:true
   });
   var code = resp.getResponseCode();
-  return (code >= 200 && code < 300) ? {ok:true, likes:nuevo} : {ok:false, error:'HTTP '+code+': '+resp.getContentText()};
+  if (code >= 200 && code < 300)
+    return {ok:true, likes:nuevoCount, yo:yo, nombres:likersNombres(lista)};
+  return {ok:false, error:'HTTP '+code+': '+resp.getContentText()};
 }
 
-// Incrementa en 1 el contador de likes de un comentario.
-function darLikeComentario(idCom) {
+// Alterna el like de un COMENTARIO para un usuario.
+function toggleLikeComentario(idCom, email, nombre) {
+  email = (email||'').trim().toLowerCase();
+  if (!email) return {ok:false, error:'Inicia sesión para dar me gusta'};
   var todos = leerTodosComentarios();
-  var recId = null, actual = 0;
+  var recId = null, actualLikers = '';
   for (var i=0;i<todos.length;i++) {
-    if (String(todos[i].id) === String(idCom)) { recId = todos[i]._recordId; actual = todos[i].likes || 0; break; }
+    if (String(todos[i].id) === String(idCom)) { recId = todos[i]._recordId; actualLikers = todos[i].likers || ''; break; }
   }
   if (!recId) return {ok:false, error:'comentario no encontrado'};
-  var nuevo = actual + 1;
+  var lista = likersParse(actualLikers);
+  var idx = -1;
+  for (var j=0;j<lista.length;j++) if (lista[j].email === email) { idx = j; break; }
+  var yo;
+  if (idx >= 0) { lista.splice(idx,1); yo = false; }
+  else { lista.push({email:email, nombre:(nombre||'').trim()}); yo = true; }
+  var nuevoTxt = likersStringify(lista);
+  var nuevoCount = lista.length;
   var url = QUINTA_BASE + '/apps/' + APP_ID + '/dtypes/' + recId + '.json';
-  var vals = {}; vals[FC.likes] = String(nuevo);
+  var vals = {};
+  vals[FC.likes]  = String(nuevoCount);
+  vals[FC.likers] = nuevoTxt;
   var body = { rest_api_key: getApiKey(), values: vals };
   var resp = UrlFetchApp.fetch(url, {
     method:'put', contentType:'application/json',
     payload: JSON.stringify(body), muteHttpExceptions:true
   });
   var code = resp.getResponseCode();
-  if (code >= 200 && code < 300) invalidarComCache();
-  return (code >= 200 && code < 300) ? {ok:true, likes:nuevo} : {ok:false, error:'HTTP '+code+': '+resp.getContentText()};
+  if (code >= 200 && code < 300) { invalidarComCache();
+    return {ok:true, likes:nuevoCount, yo:yo, nombres:likersNombres(lista)}; }
+  return {ok:false, error:'HTTP '+code+': '+resp.getContentText()};
 }
 
 // ====== UTILIDADES DE PRUEBA ================================================
