@@ -95,7 +95,7 @@ var FC = {
   aprobado: 'b9mmkjW71pW5dcHCoLwSk5',
   likes:    'cQgmk9W5XcWQLPW7FdSX1_',
   email:    'dcQq8OB8jgW5DXAComkCkD',
-  likers:   'PEGAR_FIELD_ID_LIKERS_COMENTARIOS'   // <-- campo Texto "likers" en la tabla Comentarios
+  likers:   'cbamoXWPriWQO_s1pdICoT'   // <-- campo Texto "likers" en la tabla Comentarios
 };
 
 // Mapeo de la tabla Usuarios (destinatarios de notificaciones)
