@@ -834,11 +834,24 @@ function limpiarHtmlRico(html){
             if(col)h.style.color=col;
           } else if(n==="href" && h.tagName==="A"){
             if(!/^https?:\/\//i.test(a.value))h.removeAttribute("href");
-            else{h.setAttribute("target","_blank");h.setAttribute("rel","noopener");}
+          } else if(n==="target" || n==="rel"){
+            // se re-forzan abajo
           } else {
             h.removeAttribute(a.name);
           }
         });
+        // Todo enlace válido SIEMPRE se abre en pestaña nueva
+        if(h.tagName==="A"){
+          if(h.getAttribute("href")){
+            h.setAttribute("target","_blank");
+            h.setAttribute("rel","noopener noreferrer");
+          }else{
+            // <a> sin enlace válido: dejar solo el texto
+            while(h.firstChild)nodo.insertBefore(h.firstChild,h);
+            nodo.removeChild(h);
+            return;
+          }
+        }
         limpiar(h);
       } else if(h.nodeType!==3){
         nodo.removeChild(h);
@@ -852,7 +865,7 @@ function limpiarHtmlRico(html){
 function textoARico(t){
   if(!t)return"";
   // Si ya parece HTML (tiene etiquetas), devolverlo limpio
-  if(/<(p|br|ul|ol|li|strong|b|i|em|u|h3|h4|span|div)[ >]/i.test(t))return limpiarHtmlRico(t);
+  if(/<(a|p|br|ul|ol|li|strong|b|i|em|u|h3|h4|span|div)[ >]/i.test(t))return limpiarHtmlRico(t);
   // Texto plano: escapar y convertir saltos de línea en <br>
   return esc(t).replace(/\n/g,"<br>");
 }
