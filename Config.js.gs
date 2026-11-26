@@ -165,7 +165,9 @@ function doGet(e) {
   }
   // ---- REENVIAR NOTIFICACIÓN de una noticia ya publicada (solo admin) ----
   if (params.reenviar_aviso) {
-    return jsonp(cb, withLock(function(){ return reenviarAvisoNorma(String(params.reenviar_aviso)); }));
+    var adminNombre = params.nombre ? decodeURIComponent(String(params.nombre)) : '';
+    var adminEmail  = params.email  ? decodeURIComponent(String(params.email))  : '';
+    return jsonp(cb, withLock(function(){ return reenviarAvisoNorma(String(params.reenviar_aviso), adminNombre, adminEmail); }));
   }
   // ---- COMENTARIOS ----
   if (params.com_listar) {                  // listar comentarios de una norma
@@ -263,7 +265,7 @@ function guardarNormaConAvisos(norma) {
 // Útil para noticias creadas fuera del flujo normal (p. ej. cargadas directo en
 // la base de datos). Respeta la misma lógica: a la lista de usuarios solo si es
 // riesgo/oportunidad de nivel medio o alto; al admin siempre.
-function reenviarAvisoNorma(normaId) {
+function reenviarAvisoNorma(normaId, adminNombre, adminEmail) {
   var n = null;
   var normas = obtenerNormas();
   for (var i=0;i<normas.length;i++) if (String(normas[i].id) === String(normaId)) { n = normas[i]; break; }
@@ -273,9 +275,13 @@ function reenviarAvisoNorma(normaId) {
   var nUsuarios = 0;
   try { nUsuarios = listarUsuarios().filter(function(u){ return u.activo && u.email; }).length; } catch(e){}
 
+  // Quién reenvía: el administrador que pulsó el botón (si viene), si no el
+  // autor de la noticia, y por último su correo.
+  var quien = (adminNombre || '').trim() || (adminEmail || '').trim() || n.autorNombre || n.email || '';
+
   // Enviar
   notificarUsuariosRO(n);                                         // avisa a todos los usuarios activos
-  notificarAdmin('Reenvío de aviso', (n.titulo || 'Sin título'), n.autorNombre || n.email || '');
+  notificarAdmin('Reenvío de aviso', (n.titulo || 'Sin título'), quien);
 
   return {
     ok: true,

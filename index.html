@@ -1810,7 +1810,10 @@ function reenviarAviso(normaId,titulo){
       }
     };
     var sc=document.createElement("script");
-    sc.src=SU+"?reenviar_aviso="+encodeURIComponent(normaId)+"&callback="+cb+"&t="+Date.now();
+    sc.src=SU+"?reenviar_aviso="+encodeURIComponent(normaId)
+          +"&nombre="+encodeURIComponent(USER?USER.nombre:"")
+          +"&email="+encodeURIComponent(USER?USER.email:"")
+          +"&callback="+cb+"&t="+Date.now();
     sc.onerror=function(){try{delete window[cb];}catch(e){}tst("Error de conexión al enviar");};
     document.head.appendChild(sc);
   },"Enviar",false);
