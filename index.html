@@ -321,6 +321,7 @@ body{background:#CBD5E1;padding:24px 16px;font-family:"IBM Plex Sans",sans-serif
 .confirm-box p{font-size:18px;color:var(--text);margin-bottom:22px;font-weight:600;}
 .confirm-btns{display:flex;gap:11px;justify-content:center;}
 .confirm-ok{padding:11px 28px;border-radius:8px;background:#FEE2E2;border:1px solid #FECDD3;color:#DC2626;font-size:16px;font-weight:700;cursor:pointer;font-family:"IBM Plex Sans",sans-serif;}
+.confirm-ok.confirm-ok-primary{background:#DBEAFE;border-color:#BFDBFE;color:var(--blue);}
 .confirm-cancel{padding:11px 28px;border-radius:8px;background:var(--surface);border:1px solid var(--border);color:var(--muted);font-size:16px;cursor:pointer;font-family:"IBM Plex Sans",sans-serif;}
 /* ===== TABLET (hasta 900px) ===== */
 @media(max-width:900px){
@@ -1003,7 +1004,19 @@ function crearRTE(contenedor,htmlInicial,placeholder){
   contenedor.appendChild(wrap);
   return ed;
 }
-function sfc(msg,ok){document.getElementById("confirmMsg").textContent=msg;document.getElementById("confirmOverlay").classList.add("open");PCB=ok;}
+// sfc(mensaje, callback, [textoBoton], [esPeligroso])
+//   textoBoton: etiqueta del botón de confirmar (por defecto "Eliminar")
+//   esPeligroso: true -> botón rojo (borrar); false -> botón azul (acción normal)
+function sfc(msg,ok,textoBoton,esPeligroso){
+  document.getElementById("confirmMsg").textContent=msg;
+  var btn=document.getElementById("confirmOk");
+  btn.textContent=textoBoton||"Eliminar";
+  // Por defecto rojo (peligroso) salvo que se indique lo contrario explícitamente
+  var peligro=(esPeligroso===undefined)?true:!!esPeligroso;
+  btn.classList.toggle("confirm-ok-primary",!peligro);
+  document.getElementById("confirmOverlay").classList.add("open");
+  PCB=ok;
+}
 
 // ✅ Detectar tipo de URL para icono de red social
 function detectarTipoUrl(url){
@@ -1787,6 +1800,7 @@ function reenviarAviso(normaId,titulo){
   if(!esAdmin()){tst("Solo administradores pueden hacer esto");return;}
   sfc("¿Reenviar la notificación por correo de esta noticia?\n\n\""+(titulo||"")+"\"",function(){
     tst("Enviando notificación...");
+    // (callback)
     var cb="_rav"+Date.now();
     window[cb]=function(r){try{delete window[cb];}catch(e){}
       if(r&&r.ok){
@@ -1799,7 +1813,7 @@ function reenviarAviso(normaId,titulo){
     sc.src=SU+"?reenviar_aviso="+encodeURIComponent(normaId)+"&callback="+cb+"&t="+Date.now();
     sc.onerror=function(){try{delete window[cb];}catch(e){}tst("Error de conexión al enviar");};
     document.head.appendChild(sc);
-  });
+  },"Enviar",false);
 }
 
 function darLikeNorma(normaId,btn){
