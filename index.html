@@ -1489,6 +1489,7 @@ function card(n,idx,nivel){
     "<div class='norma-actions'>"+
     "<button class='ibt' data-act='toggle' data-nid='"+id+"' data-idx='"+idx+"'>"+(isO?"&#9650;":"&#9660;")+"</button>"+
     (esAdmin()?(sB+"<button class='ibt ibt-edit' data-act='editar' data-idx='"+idx+"' data-nid='"+id+"'>&#9998;</button>"+
+    "<button class='ibt' data-act='reenviar' data-idx='"+idx+"' data-nid='"+id+"' title='Reenviar notificación por correo'>&#9993;</button>"+
     aB+"<button class='ibt' data-act='eliminar' data-idx='"+idx+"' data-nid='"+id+"'>&#128465;</button>"):"")+
     "</div></div>"+
     "<div class='norma-meta'>"+
@@ -1632,6 +1633,7 @@ document.getElementById("lista").onclick=function(ev){
     else if(a==="restaurar"){NM[idx].arch=false;updSheet(NM[idx],null);render();tst("Restaurada");}
     else if(a==="togglestar"){NM[idx].destacado=!NM[idx].destacado;tst(NM[idx].destacado?"Destacada":"Quitada de destacados");updSheet(NM[idx],null);render();}
     else if(a==="eliminar"){var nid=NM[idx].id;sfc("Eliminar esta alerta?",function(){NM.splice(idx,1);delSheet(nid);render();tst("Eliminada");});}
+    else if(a==="reenviar"){reenviarAviso(NM[idx].id,NM[idx].titulo);}
     return;
   }
   var etqBtn=ev.target.closest("[data-etqfil]");
@@ -1778,6 +1780,29 @@ function yoDiLike(likersTxt){
 }
 function likersNombresFront(likersTxt){
   return likersParseFront(likersTxt).map(function(x){return x.nombre||x.email;});
+}
+
+// Reenvía por correo la notificación de una noticia ya publicada (solo admin).
+function reenviarAviso(normaId,titulo){
+  if(!esAdmin()){tst("Solo administradores pueden hacer esto");return;}
+  sfc("¿Reenviar la notificación por correo de esta noticia?\n\n\""+(titulo||"")+"\"",function(){
+    tst("Enviando notificación...");
+    var cb="_rav"+Date.now();
+    window[cb]=function(r){try{delete window[cb];}catch(e){}
+      if(r&&r.ok){
+        var msg="Notificación enviada";
+        if(r.avisoUsuarios){ msg+=" a "+(r.usuariosNotificados||0)+" usuario(s) y al administrador"; }
+        else{ msg+=" al administrador (esta noticia no es riesgo/oportunidad, así que no va a la lista de usuarios)"; }
+        tst(msg);
+      }else{
+        tst((r&&r.error)?("Error: "+r.error):"No se pudo enviar la notificación");
+      }
+    };
+    var sc=document.createElement("script");
+    sc.src=SU+"?reenviar_aviso="+encodeURIComponent(normaId)+"&callback="+cb+"&t="+Date.now();
+    sc.onerror=function(){try{delete window[cb];}catch(e){}tst("Error de conexión al enviar");};
+    document.head.appendChild(sc);
+  });
 }
 
 function darLikeNorma(normaId,btn){

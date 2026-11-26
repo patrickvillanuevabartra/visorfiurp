@@ -163,6 +163,10 @@ function doGet(e) {
       return guardarNormaConAvisos(norma);
     }));
   }
+  // ---- REENVIAR NOTIFICACIÓN de una noticia ya publicada (solo admin) ----
+  if (params.reenviar_aviso) {
+    return jsonp(cb, withLock(function(){ return reenviarAvisoNorma(String(params.reenviar_aviso)); }));
+  }
   // ---- COMENTARIOS ----
   if (params.com_listar) {                  // listar comentarios de una norma
     return jsonp(cb, obtenerComentarios(String(params.com_listar)));
@@ -253,6 +257,41 @@ function guardarNormaConAvisos(norma) {
     notificarAdmin('Nueva publicación', (norma.titulo || 'Sin título'), norma.autorNombre || norma.email);
   }
   return res;
+}
+
+// Reenvía las notificaciones por correo de una noticia YA publicada (por su id).
+// Útil para noticias creadas fuera del flujo normal (p. ej. cargadas directo en
+// la base de datos). Respeta la misma lógica: a la lista de usuarios solo si es
+// riesgo/oportunidad de nivel medio o alto; al admin siempre.
+function reenviarAvisoNorma(normaId) {
+  var n = null;
+  var normas = obtenerNormas();
+  for (var i=0;i<normas.length;i++) if (String(normas[i].id) === String(normaId)) { n = normas[i]; break; }
+  if (!n) return {ok:false, error:'noticia no encontrada'};
+
+  // ¿Corresponde avisar a la lista de usuarios? (mismo criterio que al publicar)
+  var tipo = n.tipo_ro || '';
+  var nivel = (n.nivel_ro || '').toLowerCase();
+  var esRO = (tipo === 'riesgo' || tipo === 'oportunidad');
+  var esBajo = (nivel.indexOf('bajo') > -1 || nivel.indexOf('baja') > -1);
+  var avisaUsuarios = esRO && nivel && !esBajo;
+
+  var nUsuarios = 0;
+  if (avisaUsuarios) {
+    try { nUsuarios = listarUsuarios().filter(function(u){ return u.activo && u.email; }).length; } catch(e){}
+  }
+
+  // Enviar
+  notificarUsuariosRO(n);                                         // (no hace nada si no corresponde)
+  notificarAdmin('Reenvío de aviso', (n.titulo || 'Sin título'), n.autorNombre || n.email || '');
+
+  return {
+    ok: true,
+    titulo: n.titulo || '',
+    avisoUsuarios: avisaUsuarios,
+    usuariosNotificados: nUsuarios,
+    avisoAdmin: true
+  };
 }
 
 function doPost(e) {
