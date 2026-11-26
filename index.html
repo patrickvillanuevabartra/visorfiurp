@@ -1790,10 +1790,7 @@ function reenviarAviso(normaId,titulo){
     var cb="_rav"+Date.now();
     window[cb]=function(r){try{delete window[cb];}catch(e){}
       if(r&&r.ok){
-        var msg="Notificación enviada";
-        if(r.avisoUsuarios){ msg+=" a "+(r.usuariosNotificados||0)+" usuario(s) y al administrador"; }
-        else{ msg+=" al administrador (esta noticia no es riesgo/oportunidad, así que no va a la lista de usuarios)"; }
-        tst(msg);
+        tst("Notificación enviada a "+(r.usuariosNotificados||0)+" usuario(s) y al administrador");
       }else{
         tst((r&&r.error)?("Error: "+r.error):"No se pudo enviar la notificación");
       }

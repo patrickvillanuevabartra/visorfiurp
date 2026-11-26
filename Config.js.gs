@@ -269,26 +269,18 @@ function reenviarAvisoNorma(normaId) {
   for (var i=0;i<normas.length;i++) if (String(normas[i].id) === String(normaId)) { n = normas[i]; break; }
   if (!n) return {ok:false, error:'noticia no encontrada'};
 
-  // ¿Corresponde avisar a la lista de usuarios? (mismo criterio que al publicar)
-  var tipo = n.tipo_ro || '';
-  var nivel = (n.nivel_ro || '').toLowerCase();
-  var esRO = (tipo === 'riesgo' || tipo === 'oportunidad');
-  var esBajo = (nivel.indexOf('bajo') > -1 || nivel.indexOf('baja') > -1);
-  var avisaUsuarios = esRO && nivel && !esBajo;
-
+  // Ahora SIEMPRE se avisa a toda la lista de usuarios activos.
   var nUsuarios = 0;
-  if (avisaUsuarios) {
-    try { nUsuarios = listarUsuarios().filter(function(u){ return u.activo && u.email; }).length; } catch(e){}
-  }
+  try { nUsuarios = listarUsuarios().filter(function(u){ return u.activo && u.email; }).length; } catch(e){}
 
   // Enviar
-  notificarUsuariosRO(n);                                         // (no hace nada si no corresponde)
+  notificarUsuariosRO(n);                                         // avisa a todos los usuarios activos
   notificarAdmin('Reenvío de aviso', (n.titulo || 'Sin título'), n.autorNombre || n.email || '');
 
   return {
     ok: true,
     titulo: n.titulo || '',
-    avisoUsuarios: avisaUsuarios,
+    avisoUsuarios: true,
     usuariosNotificados: nUsuarios,
     avisoAdmin: true
   };
@@ -757,6 +749,10 @@ var TPL_DEFAULT = {
   confirmacion: {
     asunto: '[VISOR] Confirmación: {accion}',
     cuerpo: 'Tu {accion} se publicó correctamente en el portal VISOR.\n\n{detalle}\n\nGracias por participar.\n\nVer el portal: {enlace}'
+  },
+  general: {
+    asunto: '[VISOR] Nueva publicación: {titulo}',
+    cuerpo: 'Se ha publicado una nueva noticia en el portal VISOR:\n\n{titulo}\n\n{descripcion}\n\nVer en el portal: {enlace}'
   }
 };
 
@@ -819,7 +815,7 @@ function cuerpoAHtml(titulo, cuerpoTexto) {
 function listarPlantillas() {
   var todas = leerTodasPlantillas();
   var salida = [];
-  ['riesgo','admin','confirmacion'].forEach(function(clave){
+  ['riesgo','admin','confirmacion','general'].forEach(function(clave){
     var t = todas[clave];
     var def = TPL_DEFAULT[clave];
     salida.push({
@@ -884,26 +880,37 @@ function plantillaCorreo(titulo, contenido) {
        + '</div>';
 }
 
-// TIPO 1: notifica a los usuarios de la lista cuando hay riesgo/oportunidad medio o alto.
+// TIPO 1: notifica a TODA la lista de usuarios activos cada vez que se publica
+// una noticia. Si la noticia es un riesgo/oportunidad de nivel medio o alto usa
+// la plantilla 'riesgo' (con su tipo y nivel); en cualquier otro caso usa la
+// plantilla 'general'. (Opción elegida: avisar siempre a todos.)
 function notificarUsuariosRO(norma) {
   try {
-    var tipo = norma.tipo_ro || '';
-    var nivel = norma.nivel_ro || '';
-    if (tipo !== 'riesgo' && tipo !== 'oportunidad') return;
-    var nivelLower = nivel.toLowerCase();
-    var esBajo = (nivelLower.indexOf('bajo') > -1 || nivelLower.indexOf('baja') > -1);
-    if (esBajo || !nivel) return;
     var usuarios = listarUsuarios().filter(function(u){ return u.activo && u.email; });
     if (!usuarios.length) return;
-    var etiqueta = (tipo === 'riesgo') ? 'Riesgo' : 'Oportunidad';
     var link = PORTAL_PUBLIC_URL + '?abrir=' + encodeURIComponent(norma.id || '');
-    var tpl = obtenerPlantilla('riesgo');
-    var vars = {
-      tipo: etiqueta, nivel: nivel, titulo: norma.titulo || 'Sin título',
-      descripcion: norma.desc || '', enlace: link
-    };
-    var asunto = aplicarVars(tpl.asunto, vars);
-    var html = cuerpoAHtml('Nuevo ' + etiqueta + ' de nivel ' + nivel, aplicarVars(tpl.cuerpo, vars));
+
+    var tipo = norma.tipo_ro || '';
+    var nivel = norma.nivel_ro || '';
+    var nivelLower = nivel.toLowerCase();
+    var esRO = (tipo === 'riesgo' || tipo === 'oportunidad');
+    var esBajo = (nivelLower.indexOf('bajo') > -1 || nivelLower.indexOf('baja') > -1);
+    var usarRiesgo = esRO && nivel && !esBajo;
+
+    var asunto, html;
+    if (usarRiesgo) {
+      var etiqueta = (tipo === 'riesgo') ? 'Riesgo' : 'Oportunidad';
+      var tplR = obtenerPlantilla('riesgo');
+      var varsR = { tipo: etiqueta, nivel: nivel, titulo: norma.titulo || 'Sin título',
+                    descripcion: norma.desc || '', enlace: link };
+      asunto = aplicarVars(tplR.asunto, varsR);
+      html = cuerpoAHtml('Nuevo ' + etiqueta + ' de nivel ' + nivel, aplicarVars(tplR.cuerpo, varsR));
+    } else {
+      var tplG = obtenerPlantilla('general');
+      var varsG = { titulo: norma.titulo || 'Sin título', descripcion: norma.desc || '', enlace: link };
+      asunto = aplicarVars(tplG.asunto, varsG);
+      html = cuerpoAHtml('Nueva publicación', aplicarVars(tplG.cuerpo, varsG));
+    }
     for (var i=0;i<usuarios.length;i++) enviarCorreo(usuarios[i].email, asunto, html);
   } catch (e) {}
 }
