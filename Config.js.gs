@@ -193,7 +193,7 @@ function doGet(e) {
       if (res && res.ok) {
         var textoCorto = (com.texto || '').substring(0, 200);
         // TIPO 2: avisar a admin del nuevo comentario
-        notificarAdmin('Nuevo comentario', '"' + textoCorto + '"', com.autor || com.email);
+        notificarAdmin('Nuevo comentario', '"' + textoCorto + '"', com.autor || com.email, com.norma_id);
         // TIPO 3: confirmar al autor (si dejó su correo)
         if (com.email) {
           notificarUsuarioConfirmacion(com.email, 'Comentario', '"' + textoCorto + '"');
@@ -256,7 +256,7 @@ function guardarNormaConAvisos(norma) {
   if (res && res.ok) {
     notificarUsuariosRO(norma);
     if (norma.email) notificarUsuarioConfirmacion(norma.email, 'Publicación', norma.titulo || '');
-    notificarAdmin('Nueva publicación', (norma.titulo || 'Sin título'), norma.autorNombre || norma.email);
+    notificarAdmin('Nueva publicación', (norma.titulo || 'Sin título'), norma.autorNombre || norma.email, norma.id);
   }
   return res;
 }
@@ -281,7 +281,7 @@ function reenviarAvisoNorma(normaId, adminNombre, adminEmail) {
 
   // Enviar
   notificarUsuariosRO(n);                                         // avisa a todos los usuarios activos
-  notificarAdmin('Reenvío de aviso', (n.titulo || 'Sin título'), quien);
+  notificarAdmin('Reenvío de aviso', (n.titulo || 'Sin título'), quien, n.id);
 
   return {
     ok: true,
@@ -922,10 +922,12 @@ function notificarUsuariosRO(norma) {
 }
 
 // TIPO 2: avisa a los administradores cuando alguien comenta o crea algo.
-function notificarAdmin(tipoAccion, detalle, autorEmail) {
+function notificarAdmin(tipoAccion, detalle, autorEmail, normaId) {
   try {
     var tpl = obtenerPlantilla('admin');
-    var vars = { accion: tipoAccion, detalle: detalle || '', autor: autorEmail || 'anónimo', enlace: PORTAL_PUBLIC_URL };
+    // Si se conoce la noticia, el enlace abre esa noticia directamente.
+    var enlace = normaId ? (PORTAL_PUBLIC_URL + '?abrir=' + encodeURIComponent(normaId)) : PORTAL_PUBLIC_URL;
+    var vars = { accion: tipoAccion, detalle: detalle || '', autor: autorEmail || 'anónimo', enlace: enlace };
     var asunto = aplicarVars(tpl.asunto, vars);
     var html = cuerpoAHtml(tipoAccion, aplicarVars(tpl.cuerpo, vars));
     for (var i=0;i<ADMIN_NOTIF_EMAILS.length;i++) enviarCorreo(ADMIN_NOTIF_EMAILS[i], asunto, html);
